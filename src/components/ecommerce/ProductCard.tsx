@@ -92,14 +92,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <button
           type="button"
           onClick={handleWishlist}
-          className={`absolute top-2.5 right-2.5 z-10 p-2 rounded-full backdrop-blur-md transition-all duration-200 cursor-pointer ${
+          className={`absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 z-10 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full backdrop-blur-md transition-all duration-200 cursor-pointer flex items-center justify-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
             isSaved
               ? "bg-[#541920] text-[#FAF7F2]"
-              : "bg-[#FAF7F2]/80 text-[#1C1A18] hover:text-[#541920] hover:bg-white"
+              : "bg-[#FAF7F2]/80 text-[#1C1A18] hover:text-[#541920] hover:bg-white shadow-xs"
           }`}
           aria-label={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
         >
-          <Heart size={15} className={isSaved ? "fill-current" : ""} />
+          <Heart size={16} className={isSaved ? "fill-current" : ""} />
         </button>
 
         {/* Quick View Button (Desktop Hover) */}
@@ -129,7 +129,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
           {/* Product Name */}
           <Link href={`/product/${product.id}`} className="group-hover:text-[#541920] transition-colors">
-            <h3 className="font-serif-display text-base font-medium text-[#1C1A18] leading-snug line-clamp-1">
+            <h3 className="font-serif-display text-sm sm:text-base font-medium text-[#1C1A18] leading-snug line-clamp-2">
               {product.name}
             </h3>
           </Link>
@@ -142,7 +142,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Pricing Block */}
         <div className="mt-2.5 pt-2 border-t border-[#1C1A18]/6 flex flex-col">
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="font-serif-display text-lg font-semibold text-[#1C1A18]">
               {formatPrice(product.price)}
             </span>
@@ -152,7 +152,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </span>
             )}
             {product.discountPercent > 0 && (
-              <span className="text-[11px] text-[#15803D] font-semibold">
+              <span className="text-[11px] text-[#15803D] font-semibold whitespace-nowrap">
                 {product.discountPercent}% OFF
               </span>
             )}
@@ -161,7 +161,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {/* Add to Bag Button */}
           <button
             onClick={handleQuickAdd}
-            className={`w-full mt-3 py-2.5 text-[11px] uppercase tracking-[0.16em] font-semibold flex items-center justify-center gap-1.5 transition-colors rounded-xs ${
+            className={`w-full mt-3 min-h-[44px] py-2.5 text-[11px] uppercase tracking-[0.16em] font-semibold flex items-center justify-center gap-1.5 transition-colors rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none cursor-pointer ${
               justAdded
                 ? "bg-[#15803D] text-[#FAF7F2]"
                 : "bg-[#541920] hover:bg-[#3D1217] text-white shadow-xs"
