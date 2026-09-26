@@ -1,0 +1,460 @@
+import React, { useState, useEffect } from 'react';
+import { Sparkles, ArrowRight, ShieldCheck, Award, Heart, ShoppingBag, Star, ChevronRight, Check } from 'lucide-react';
+import ProductCard from '../components/ProductCard';
+
+export default function HomePage({ onNavigate }) {
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [prodRes, bestRes, catRes] = await Promise.all([
+          fetch('/api/products?featured=true&limit=4'),
+          fetch('/api/products?best_seller=true&limit=4'),
+          fetch('/api/categories')
+        ]);
+
+        const prodData = await prodRes.json();
+        const bestData = await bestRes.json();
+        const catData = await catRes.json();
+
+        if (prodData.products) setFeaturedProducts(prodData.products);
+        if (bestData.products) setBestSellers(bestData.products);
+        if (catData.categories) setCategories(catData.categories);
+      } catch (err) {
+        console.error('Home data fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const occasionCollections = [
+    {
+      title: 'Wedding Edit',
+      subtitle: 'Heirloom bridal and trousseau masterworks woven with pure zari.',
+      image: '/images/occasions/wedding_collection.jpg',
+      filter: { occasion: 'Wedding' }
+    },
+    {
+      title: 'Festive Glow',
+      subtitle: 'Rich jewel tones and radiant weaves for Diwali, Durga Puja & festivities.',
+      image: '/images/occasions/festive_glow.jpg',
+      filter: { occasion: 'Festive' }
+    },
+    {
+      title: 'Evening Glam',
+      subtitle: 'Glamorous shimmer georgettes and sequins for cocktail celebrations.',
+      image: '/images/occasions/evening_glam.jpg',
+      filter: { occasion: 'Party' }
+    },
+    {
+      title: 'Office Elegance',
+      subtitle: 'Crisp organic French linen and breathable 100s mulmul cotton.',
+      image: '/images/occasions/office_elegance.jpg',
+      filter: { occasion: 'Workwear' }
+    },
+    {
+      title: 'Everyday Grace',
+      subtitle: 'Effortless lightweight drapes designed for gentle comfort.',
+      image: '/images/occasions/everyday_grace.jpg',
+      filter: { category: 'cotton-sarees' }
+    },
+    {
+      title: 'Temple & Heritage',
+      subtitle: 'Sacred auspicious motifs and sanctified pure silk zari borders.',
+      image: '/images/occasions/temple_heritage.jpg',
+      filter: { occasion: 'Festive', category: 'kanjivaram-sarees' }
+    }
+  ];
+
+  const weaveCategories = categories.filter((cat) =>
+    !['designer-sarees', 'party-wear', 'bridal-collection'].includes(cat.slug)
+  );
+
+  const testimonials = [
+    {
+      name: 'Dr. Radhika Sen',
+      role: 'Kolkata, WB',
+      rating: 5,
+      comment: 'The Royal Crimson Banarasi exceeded every expectation. The kadwa gold zari work is dense yet remarkably lightweight.',
+      saree: 'Royal Crimson Banarasi Katan'
+    },
+    {
+      name: 'Meera Nambiar',
+      role: 'Bengaluru, KA',
+      rating: 5,
+      comment: 'Authentic heavy korvai luster with a royal drape. The luxury burgundy packaging made unboxing feel like a celebration.',
+      saree: 'Vaidarbhi Pure Kanjivaram Gold'
+    },
+    {
+      name: 'Shweta Singhania',
+      role: 'Mumbai, MH',
+      rating: 5,
+      comment: 'The Noor rose gold organza saree is pure poetry. Featherlight on the skin with an exquisite scalloped border.',
+      saree: 'Noor Rose Gold Organza'
+    }
+  ];
+
+  const instagramPosts = [
+    {
+      image: '/images/social/social_1.jpg',
+      handle: '@ananya_drapes',
+      text: 'Wrapped in timeless Banarasi magic.',
+      url: 'https://www.instagram.com/ananya_drapes/'
+    },
+    {
+      image: '/images/social/social_2.jpg',
+      handle: '@priyasharma_weddings',
+      text: 'The bridal glow in pure Kanjivaram gold.',
+      url: 'https://www.instagram.com/priyasharma_weddings/'
+    },
+    {
+      image: '/images/social/social_3.jpg',
+      handle: '@tarini_lifestyle',
+      text: 'Festive radiance in emerald silk.',
+      url: 'https://www.instagram.com/tarini_lifestyle/'
+    },
+    {
+      image: '/images/social/social_4.jpg',
+      handle: '@palluvo_official',
+      text: 'Featherlight organza blossoms.',
+      url: 'https://www.instagram.com/palluvo_official/'
+    }
+  ];
+
+  return (
+    <div className="flex flex-col">
+      {/* 1. HERO SECTION */}
+      <section className="relative flex flex-col justify-end sm:justify-center overflow-hidden bg-[#1F1A1C] text-[#FAF7F2] sm:min-h-[85vh]">
+        {/* Background Image — Full 100% Brightness with Top-Aligned Portrait Crop on Mobile */}
+        <div className="absolute inset-0 z-0">
+          <picture>
+            <source media="(max-width: 640px)" srcSet="/images/occasions/wedding_edit.jpg" />
+            <img
+              src="/images/occasions/wedding_edit.jpg"
+              alt="Indian bride adorned in an ornate crimson and gold handcrafted silk saree"
+              className="w-full h-full object-cover object-[center_12%] sm:object-right md:object-[75%_center] opacity-100 scale-100 transition-transform duration-1000 ease-out"
+            />
+          </picture>
+          {/* Bottom-anchored gradient on mobile leaves the model's face & upper saree 100% unobstructed, while providing solid contrast for bottom copy */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1F1A1C] via-[#1F1A1C]/75 via-40% to-transparent sm:bg-gradient-to-r sm:from-[#1F1A1C]/75 sm:via-[#1F1A1C]/25 sm:via-40% sm:to-transparent pointer-events-none" />
+        </div>
+
+        {/* Hero Content — Seamless Luxury Typography Positioned Below Subject with Full Bottom Safe Area */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-24 sm:py-28 flex flex-col items-start max-w-2xl w-full mt-auto sm:mt-0">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-[#FAF7F2]/10 backdrop-blur-md border border-[#C5A059]/40 text-[#C5A059] text-[10px] sm:text-xs font-semibold uppercase tracking-widest mb-2.5 sm:mb-6 animate-fade-in shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+            <span>The Festive & Bridal Heirloom Edit</span>
+          </div>
+
+          <h1 className="font-serif text-3xl sm:text-6xl lg:text-7xl font-bold leading-[1.15] sm:leading-[1.1] tracking-tight text-[#FAF7F2] drop-shadow-sm animate-slide-up">
+            Every drape, <br />
+            <span className="italic font-normal gold-gradient-text">a little magic.</span>
+          </h1>
+
+          <p className="mt-2 sm:mt-6 text-xs sm:text-lg text-[#FAF7F2]/85 leading-relaxed font-sans max-w-lg drop-shadow-xs">
+            Handcrafted Banarasi, pure Kanjivaram, and ethereal organza sarees designed to make your celebratory moments unforgettable.
+          </p>
+
+          {/* Action CTAs: Side-by-side on mobile to eliminate vertical height overflow */}
+          <div className="mt-4 sm:mt-8 flex flex-row items-center gap-2.5 sm:gap-4 w-full sm:w-auto">
+            <button
+              onClick={() => onNavigate('shop')}
+              className="flex-1 sm:flex-none px-4 sm:px-8 py-3 sm:py-4 bg-[#5B1425] hover:bg-[#7E1E34] text-[#FAF7F2] font-bold text-[11px] sm:text-xs uppercase tracking-widest rounded-xl transition-all duration-300 shadow-2xl flex items-center justify-center gap-1.5 sm:gap-2.5 border border-[#C5A059]/30 active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#C5A059] focus-visible:outline-none whitespace-nowrap"
+            >
+              <span>Explore Sarees</span>
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#C5A059]" />
+            </button>
+
+            <button
+              onClick={() => onNavigate('shop', { occasion: 'Wedding' })}
+              className="flex-1 sm:flex-none px-4 sm:px-8 py-3 sm:py-4 bg-[#FAF7F2]/10 hover:bg-[#FAF7F2]/20 backdrop-blur-md text-[#FAF7F2] font-semibold text-[11px] sm:text-xs uppercase tracking-widest rounded-xl transition-all duration-300 border border-white/20 hover:border-[#C5A059] active:scale-95 text-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#C5A059] focus-visible:outline-none whitespace-nowrap"
+            >
+              Bridal Edit
+            </button>
+          </div>
+
+          {/* Micro Trust Stats */}
+          <div className="mt-4 sm:mt-12 pt-3 sm:pt-8 border-t border-white/15 grid grid-cols-3 gap-2 sm:gap-6 text-left w-full">
+            <div>
+              <div className="font-serif text-base sm:text-2xl font-bold text-[#C5A059]">100%</div>
+              <div className="text-[9px] sm:text-[11px] text-[#FAF7F2]/70 uppercase tracking-wider mt-0.5">Pure Handloom</div>
+            </div>
+            <div>
+              <div className="font-serif text-base sm:text-2xl font-bold text-[#C5A059]">15k+</div>
+              <div className="text-[9px] sm:text-[11px] text-[#FAF7F2]/70 uppercase tracking-wider mt-0.5">Drapes Loved</div>
+            </div>
+            <div>
+              <div className="font-serif text-base sm:text-2xl font-bold text-[#C5A059]">4.9 ★</div>
+              <div className="text-[9px] sm:text-[11px] text-[#FAF7F2]/70 uppercase tracking-wider mt-0.5">Verified Reviews</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. CATEGORY SECTION (Horizontal Swipeable Carousel on Mobile) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 w-full">
+        <div className="flex items-end justify-between mb-6 sm:mb-8">
+          <div>
+            <h2 className="font-serif text-2xl sm:text-4xl font-bold text-[#1F1A1C]">
+              Shop by Weave & Fabric
+            </h2>
+          </div>
+          <button
+            onClick={() => onNavigate('shop')}
+            className="text-xs font-bold uppercase tracking-wider text-[#5B1425] hover:text-[#7E1E34] hidden sm:inline-flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#C5A059] focus-visible:outline-none rounded-lg p-1"
+          >
+            <span>View All</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#C5A059]" />
+          </button>
+        </div>
+
+        {/* Mobile Horizontal Carousel / Desktop 5-Col Grid */}
+        <div className="flex overflow-x-auto gap-3.5 sm:gap-4 no-scrollbar scroll-touch -mx-4 px-4 sm:mx-0 sm:px-0 md:grid md:grid-cols-5 md:gap-5 pb-2">
+          {weaveCategories.map((cat) => (
+            <button
+              type="button"
+              key={cat.id}
+              onClick={() => onNavigate('shop', { category: cat.slug })}
+              className="group relative w-36 sm:w-44 md:w-auto shrink-0 snap-item aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl transition-all duration-300 text-left focus-visible:ring-2 focus-visible:ring-[#C5A059] focus-visible:outline-none focus-visible:ring-offset-2"
+              aria-label={/sarees?$/i.test(cat.name.trim()) ? `Explore ${cat.name}` : `Explore ${cat.name} Sarees`}
+            >
+              <img
+                src={cat.image_url}
+                alt={cat.name}
+                loading="lazy"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent group-hover:from-[#5B1425]/90 transition-colors duration-300" />
+              
+              <div className="absolute inset-x-3 bottom-3 sm:bottom-4 text-center text-white">
+                <h3 className="font-serif text-xs sm:text-lg font-bold tracking-wide leading-snug sm:leading-normal group-hover:text-[#E0C07F] transition line-clamp-2">
+                  {cat.name}
+                </h3>
+                <div className="mt-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#C5A059] inline-flex items-center gap-0.5">
+                  <span>Explore</span>
+                  <ChevronRight className="w-2.5 h-2.5" />
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* 3. FEATURED COLLECTIONS: CURATED FOR EVERY OCCASION */}
+      <section className="bg-[#F4EFEB] py-12 sm:py-16 border-y border-[#EAE2D7]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8">
+            <div>
+              <span className="text-xs font-semibold text-[#5B1425] uppercase tracking-widest">
+                Signature Stories
+              </span>
+              <h2 className="font-serif text-2xl sm:text-4xl font-bold text-[#1F1A1C] mt-1">
+                Curated for Every Occasion
+              </h2>
+            </div>
+            <button
+              onClick={() => onNavigate('shop')}
+              className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-wider text-[#5B1425] hover:text-[#7E1E34] inline-flex items-center gap-1 group focus-visible:ring-2 focus-visible:ring-[#C5A059] focus-visible:outline-none rounded-lg p-1"
+            >
+              <span>View All Collections</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform text-[#C5A059]" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {occasionCollections.map((col, idx) => (
+              <button
+                type="button"
+                key={idx}
+                onClick={() => onNavigate('shop', col.filter)}
+                className="group relative bg-white rounded-2xl overflow-hidden border border-[#EAE2D7] shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col text-left focus-visible:ring-2 focus-visible:ring-[#C5A059] focus-visible:outline-none focus-visible:ring-offset-2"
+                aria-label={`Explore ${col.title} Collection`}
+              >
+                <div className="aspect-[4/3] w-full overflow-hidden bg-[#FAF7F2]">
+                  <img
+                    src={col.image}
+                    alt={col.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                </div>
+
+                <div className="p-5 flex-1 flex flex-col justify-between w-full">
+                  <div>
+                    <h3 className="font-serif text-xl font-bold text-[#1F1A1C] group-hover:text-[#5B1425] transition">
+                      {col.title}
+                    </h3>
+                    <p className="text-xs text-[#6E6467] mt-1.5 leading-relaxed">
+                      {col.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-[#F4EFEB] flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-[#5B1425] group-hover:underline">
+                      Explore Edition
+                    </span>
+                    <div className="w-7 h-7 rounded-full bg-[#FAF7F2] flex items-center justify-center text-[#5B1425] group-hover:bg-[#5B1425] group-hover:text-[#FAF7F2] transition">
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. BEST SELLERS / SPOTLIGHT SAREES */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 w-full">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8">
+          <div>
+            <h2 className="font-serif text-2xl sm:text-4xl font-bold text-[#1F1A1C]">
+              Best Sellers of the Season
+            </h2>
+          </div>
+          <button
+            onClick={() => onNavigate('shop', { filter: 'best_seller' })}
+            className="mt-4 md:mt-0 text-xs font-bold uppercase tracking-wider text-[#5B1425] hover:text-[#7E1E34] inline-flex items-center gap-1 group focus-visible:ring-2 focus-visible:ring-[#C5A059] focus-visible:outline-none rounded-lg p-1"
+          >
+            <span>View All Best Sellers</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform text-[#C5A059]" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {bestSellers.map((prod) => (
+            <ProductCard key={prod.id} product={prod} onNavigate={onNavigate} />
+          ))}
+        </div>
+      </section>
+
+      {/* 5. BRAND STORY BANNER */}
+      <section className="relative bg-[#3F0D19] text-[#FAF7F2] py-14 sm:py-20 overflow-hidden">
+        <div className="absolute -right-20 -bottom-20 w-96 h-96 rounded-full bg-[#5B1425]/50 blur-3xl" />
+        <div className="absolute -left-20 -top-20 w-96 h-96 rounded-full bg-[#C5A059]/20 blur-3xl" />
+
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center space-y-6">
+          <div className="text-[#C5A059] text-2xl">✦ ✦ ✦</div>
+          <h2 className="font-serif text-3xl sm:text-5xl font-bold leading-tight">
+            "A saree is not merely six yards of silk; <br className="hidden sm:inline" />
+            it is centuries of art, woven into memory."
+          </h2>
+          <p className="text-xs sm:text-sm text-[#FAF7F2]/80 leading-relaxed max-w-2xl mx-auto">
+            At PALLUVO, every saree is born on the handloom through weeks of dedicated craftsmanship. We work closely with master weavers across Varanasi, Kanchipuram, and Chanderi to bring you authentic weaves that celebrate modern Indian grace.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => onNavigate('shop', { category: 'banarasi-sarees' })}
+              className="px-8 py-3.5 bg-[#C5A059] text-[#1F1A1C] font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-[#E0C07F] transition shadow-xl focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+            >
+              Discover the Weaves
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. TESTIMONIALS */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 w-full">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <h2 className="font-serif text-2xl sm:text-4xl font-bold text-[#1F1A1C]">
+            Voices of the PALLUVO Circle
+          </h2>
+          <div className="w-16 h-0.5 bg-[#C5A059] mx-auto mt-3" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {testimonials.map((t, idx) => (
+            <div
+              key={idx}
+              className="bg-white rounded-2xl p-6 border border-[#EAE2D7] shadow-sm hover:shadow-md transition flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center text-[#C5A059] text-sm mb-3">
+                  {[...Array(t.rating)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-current text-[#C5A059]" />
+                  ))}
+                </div>
+                <p className="text-xs sm:text-sm text-[#1F1A1C] italic leading-relaxed">
+                  "{t.comment}"
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-[#F4EFEB] flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-[#1F1A1C]">{t.name}</div>
+                  <div className="text-[11px] text-[#6E6467]">{t.role}</div>
+                </div>
+                <span className="text-[10px] bg-green-50 text-green-800 font-semibold px-2 py-0.5 rounded border border-green-200">
+                  ✓ Verified Buyer
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 7. INSTAGRAM / JOURNEY GALLERY */}
+      <section className="bg-[#FAF7F2] py-8 sm:py-12 border-t border-[#EAE2D7] w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#1F1A1C]">
+              Follow the PALLUVO Journey
+            </h2>
+            <p className="text-xs text-[#6E6467] mt-1.5">
+              Tag @palluvo_official and #EveryDrapeMagic to be featured on our luxury editorial wall
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {instagramPosts.map((post, idx) => (
+              <a
+                key={idx}
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative bg-white rounded-2xl overflow-hidden border border-[#EAE2D7] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col text-left focus-visible:ring-2 focus-visible:ring-[#C5A059] focus-visible:outline-none focus-visible:ring-offset-2 cursor-pointer"
+                aria-label={`View Instagram post and profile for ${post.handle} (opens in new tab)`}
+              >
+                <div className="relative aspect-square w-full overflow-hidden bg-[#FAF7F2]">
+                  <img
+                    src={post.image}
+                    alt={`Saree drape styling by ${post.handle}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white shadow-sm">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+                      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between bg-white">
+                  <div>
+                    <span className="text-xs font-bold text-[#5B1425] group-hover:text-[#7E1E34] transition">
+                      {post.handle}
+                    </span>
+                    <p className="text-[11px] sm:text-xs text-[#6E6467] mt-1 line-clamp-2 leading-relaxed">
+                      {post.text}
+                    </p>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-[#F4EFEB] flex items-center justify-between text-[10px] sm:text-[11px] font-semibold text-[#C5A059] uppercase tracking-wider">
+                    <span>View Post</span>
+                    <span>↗</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
