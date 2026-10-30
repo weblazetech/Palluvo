@@ -1,0 +1,100 @@
+import React from 'react';
+import { Metadata } from 'next';
+import AccountClient from './AccountClient';
+
+export const metadata: Metadata = {
+  title: 'My Atelier Account',
+  description: 'Manage your PALLUVO privilege account, tracked handloom saree orders, and delivery addresses.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+  alternates: {
+    canonical: '/account',
+  },
+  openGraph: {
+    title: 'My Atelier Account | PALLUVO Luxury Sarees',
+    description: 'Manage your PALLUVO privilege account, tracked handloom saree orders, and delivery addresses.',
+    url: 'https://palluvo.com/account',
+    images: [
+      {
+        url: '/images/hero_campaign.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'PALLUVO Atelier Account',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'My Atelier Account | PALLUVO Luxury Sarees',
+    description: 'Manage your PALLUVO privilege account, tracked handloom saree orders, and delivery addresses.',
+    images: ['/images/hero_campaign.jpg'],
+  },
+};
+
+import { createClient } from '@/utils/supabase/server';
+import AccountPortal from './AccountPortal';
+import { PlacedOrder } from '@/types';
+import { normalizeEmail } from '@/utils/format';
+
+export default async function AccountPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <AccountPortal />;
+  }
+
+  const normalizedUserEmail = normalizeEmail(user.email);
+
+  // Claim any unlinked guest orders placed with this authenticated user's email (exact match)
+  if (normalizedUserEmail) {
+    try {
+      await supabase
+        .from('orders')
+        .update({ user_id: user.id })
+        .is('user_id', null)
+        .eq('customer->>email', normalizedUserEmail);
+    } catch {
+      // Ignore if RLS restricts guest batch update
+    }
+  }
+
+  // Attempt to fetch server-side orders scoped to this authenticated user
+  let initialOrders: PlacedOrder[] | null = null;
+  try {
+    const { data: serverOrders, error } = await supabase
+      .from('orders')
+      .select('*')
+      .or(`user_id.eq.${user.id},and(user_id.is.null,customer->>email.eq.${normalizedUserEmail})`)
+      .order('created_at', { ascending: false });
+
+    if (!error && serverOrders) {
+      initialOrders = serverOrders.map((o: Record<string, unknown>) => ({
+        id: (o.id as string) || (o.order_number as string) || (o.orderNumber as string),
+        orderNumber: (o.order_number as string) || (o.orderNumber as string) || (o.id as string),
+        date: (o.date as string) || (o.created_at ? new Date(o.created_at as string).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })),
+        status: (o.status as 'Confirmed' | 'Delivered' | 'In Transit') || 'Confirmed',
+        items: (o.items as PlacedOrder['items']) || [],
+        subtotal: Number(o.subtotal) || 0,
+        discountAmount: Number(o.discount_amount ?? o.discountAmount ?? 0),
+        shippingFee: Number(o.shipping_fee ?? o.shippingFee ?? 0),
+        grandTotal: Number(o.grand_total ?? o.grandTotal ?? 0),
+        paymentMethod: (o.payment_method as PlacedOrder['paymentMethod']) || (o.paymentMethod as PlacedOrder['paymentMethod']) || 'cod',
+        customer: (o.customer as PlacedOrder['customer']) || {}
+      }));
+    }
+  } catch {
+    // If Supabase table query fails, AccountClient will reconcile client storage
+  }
+
+  return (
+    <AccountClient 
+      userEmail={normalizedUserEmail || user.email} 
+      userId={user.id} 
+      userName={user.user_metadata?.full_name} 
+      serverOrders={initialOrders}
+    />
+  );
+}
