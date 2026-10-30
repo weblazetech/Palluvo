@@ -1,0 +1,474 @@
+import React, { useState } from 'react';
+import { ShieldCheck, Truck, RotateCcw, Award, ArrowRight, Sparkles, ChevronDown, ChevronUp, Mail, Phone, MapPin } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+
+export default function Footer({ onNavigate }) {
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const { addToast } = useToast();
+  const [openSection, setOpenSection] = useState(null); // 'shop', 'care', 'about', 'policies'
+
+  const toggleSection = (sec) => {
+    setOpenSection(prev => prev === sec ? null : sec);
+  };
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    const email = newsletterEmail.trim();
+    if (!email) return;
+
+    setIsSubscribing(true);
+    try {
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addToast(data.message || `✨ Welcome to the PALLUVO Circle! Use code ${data.couponCode || 'WELCOME10'} for 10% OFF (up to ₹1,500) on orders above ₹1,999.`);
+        setNewsletterEmail('');
+      } else {
+        addToast(data.error || 'Unable to subscribe. Please try again.');
+      }
+    } catch (err) {
+      console.error('Newsletter subscribe error:', err);
+      addToast('Network error while subscribing. Please try again.');
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  return (
+    <footer className="bg-[#1F1A1C] text-[#FAF7F2] border-t border-[#C5A059]/30 pt-12 sm:pt-16 pb-24 lg:pb-12 safe-area-pb">
+      {/* Brand Pillars & Trust Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-14 border-b border-white/10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-left">
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3 bg-[#5B1425] text-[#C5A059] rounded-2xl shadow-lg shrink-0">
+              <Award className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <h4 className="font-serif font-bold text-xs sm:text-sm text-[#FAF7F2]">100% Authentic Handlooms</h4>
+              <p className="text-[11px] sm:text-xs text-[#FAF7F2]/70 mt-0.5 leading-relaxed">Direct from Varanasi & Kanchipuram master weavers.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3 bg-[#5B1425] text-[#C5A059] rounded-2xl shadow-lg shrink-0">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <h4 className="font-serif font-bold text-xs sm:text-sm text-[#FAF7F2]">Secure Razorpay Payments</h4>
+              <p className="text-[11px] sm:text-xs text-[#FAF7F2]/70 mt-0.5 leading-relaxed">Bank-grade 256-bit encryption for UPI, Cards & NetBanking.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3 bg-[#5B1425] text-[#C5A059] rounded-2xl shadow-lg shrink-0">
+              <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <h4 className="font-serif font-bold text-xs sm:text-sm text-[#FAF7F2]">7-Day Doorstep Returns</h4>
+              <p className="text-[11px] sm:text-xs text-[#FAF7F2]/70 mt-0.5 leading-relaxed">7-day doorstep returns and replacements with insured reverse pickup.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+            <div className="p-2.5 sm:p-3 bg-[#5B1425] text-[#C5A059] rounded-2xl shadow-lg shrink-0">
+              <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <h4 className="font-serif font-bold text-xs sm:text-sm text-[#FAF7F2]">Complimentary Express Delivery</h4>
+              <p className="text-[11px] sm:text-xs text-[#FAF7F2]/70 mt-0.5 leading-relaxed">Free luxury insured delivery on orders above ₹1,999.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Luxury Flagship Store & Concierge Showcase Card */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 border-b border-white/10">
+        <div className="bg-gradient-to-r from-[#2A0812] via-[#3E0D1B] to-[#1F1A1C] border border-[#C5A059]/35 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2 text-[#C5A059] text-[11px] font-semibold uppercase tracking-widest">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Bespoke Saree Concierge & Store Visit</span>
+            </div>
+            <h3 className="font-serif text-lg sm:text-2xl font-bold text-[#FAF7F2]">
+              Visit Our Flagship Store or Connect Privately
+            </h3>
+            <p className="text-xs text-[#FAF7F2]/80 leading-relaxed">
+              Experience handcrafted Banarasi, Kanjivaram, and pure silk drapes in person, or speak directly with our private saree curators for personalized drape consultations.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#FAF7F2]/90 pt-1">
+              <a
+                href="tel:+918897776984"
+                className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#C5A059]/40 text-[#FAF7F2] hover:text-[#C5A059] transition font-medium cursor-pointer"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                <span>+91 88977 76984 <span className="text-[#C5A059]/80 font-normal">(Concierge)</span></span>
+              </a>
+              <a
+                href="tel:+918498854323"
+                className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#C5A059]/40 text-[#FAF7F2] hover:text-[#C5A059] transition font-medium cursor-pointer"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                <span>+91 84988 54323 <span className="text-[#C5A059]/80 font-normal">(Care)</span></span>
+              </a>
+              <a
+                href="tel:+918106789789"
+                className="min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#C5A059]/40 text-[#FAF7F2] hover:text-[#C5A059] transition font-medium cursor-pointer"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                <span>+91 81067 89789 <span className="text-[#C5A059]/80 font-normal">(Support & Orders)</span></span>
+              </a>
+            </div>
+            <div className="text-xs text-[#FAF7F2]/80 flex items-center gap-1.5 pt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+              <span>Flagship Store: Warangal, Telangana, India</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+            <a
+              href="https://maps.app.goo.gl/wkcLwsNgHp39z4pe7"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C5A059] hover:bg-[#E0C07F] text-[#1F1A1C] font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md cursor-pointer group min-h-[44px]"
+              title="Open PALLUVO on Google Maps"
+            >
+              <MapPin className="w-4 h-4 text-[#1F1A1C] group-hover:scale-110 transition-transform" />
+              <span>Visit on Google Maps ↗</span>
+            </a>
+
+            <a
+              href="mailto:info@palluvo.store"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-[#FAF7F2] hover:text-[#C5A059] border border-white/20 hover:border-[#C5A059]/50 text-xs font-semibold rounded-xl transition cursor-pointer min-h-[44px]"
+            >
+              <Mail className="w-4 h-4 text-[#C5A059]" />
+              <span>info@palluvo.store</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Footer Links: Accordion on Mobile, Multi-col on Desktop */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        
+        {/* Top Brand Banner & Newsletter */}
+        <div className="mb-10 lg:mb-12 max-w-2xl space-y-3">
+          <button
+            type="button"
+            className="min-h-[44px] inline-flex items-center gap-1.5 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] rounded-sm py-1"
+            onClick={() => onNavigate('home')}
+            aria-label="PALLUVO - Return to homepage"
+          >
+            <span className="font-cinzel text-2xl sm:text-3xl font-bold tracking-[0.2em] text-[#C5A059]">
+              PALLUVO
+            </span>
+            <span className="text-[#C5A059] text-xl -mt-2">✦</span>
+          </button>
+          <p className="text-xs font-serif italic text-[#FAF7F2]/80 tracking-wider uppercase">
+            Every drape, a little magic.
+          </p>
+          <p className="text-xs text-[#FAF7F2]/70 leading-relaxed">
+            PALLUVO honors India’s centuries of textile artistry. From regal Banarasi weaves to ethereal organza silhouettes, each saree is handcrafted to make your most cherished memories unforgettable.
+          </p>
+
+          <form onSubmit={handleSubscribe} className="pt-2 max-w-md space-y-1.5">
+            <label htmlFor="footer-newsletter-email" className="block text-xs font-semibold text-[#C5A059] tracking-wide">
+              Subscribe to the PALLUVO Circle (Get 10% OFF with code WELCOME10)
+            </label>
+            <p className="text-[11px] text-[#FAF7F2]/70">
+              Enjoy 10% OFF (up to ₹1,500) on your first luxury purchase above ₹1,999.
+            </p>
+            <div className="flex">
+              <input
+                id="footer-newsletter-email"
+                name="email"
+                type="email"
+                required
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="Enter your email address..."
+                aria-label="Email address for newsletter and 10% welcome coupon (up to ₹1,500 off on orders above ₹1,999)"
+                className="flex-1 min-h-[44px] bg-white/10 border border-white/20 rounded-l-xl px-3.5 py-2.5 text-xs text-[#FAF7F2] placeholder-white/75 focus:outline-none focus:border-[#C5A059]"
+              />
+              <button
+                type="submit"
+                disabled={isSubscribing}
+                aria-label="Subscribe to newsletter"
+                className="min-h-[44px] bg-[#C5A059] text-[#1F1A1C] font-bold text-xs px-4 py-2.5 rounded-r-xl hover:bg-[#E0C07F] disabled:opacity-60 transition flex items-center justify-center gap-1 shrink-0 cursor-pointer"
+              >
+                <span>{isSubscribing ? 'Joining...' : 'Join'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Mobile Accordion Sections (Specified in prompt) */}
+        <div className="lg:hidden space-y-2 border-t border-white/10 pt-4">
+          
+          {/* 1. Shop Accordion */}
+          <div className="border-b border-white/10 pb-2">
+            <button
+              onClick={() => toggleSection('shop')}
+              aria-expanded={openSection === 'shop'}
+              className="w-full min-h-[44px] flex items-center justify-between py-3 text-xs font-serif font-bold uppercase tracking-wider text-[#C5A059] cursor-pointer"
+            >
+              <span>Shop Sarees & Collections</span>
+              {openSection === 'shop' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {openSection === 'shop' && (
+              <ul className="space-y-1 text-xs text-[#FAF7F2]/80 pb-3 pl-2 animate-fade-in">
+                <li><button onClick={() => onNavigate('shop', { category: 'banarasi-sarees' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Banarasi Sarees</button></li>
+                <li><button onClick={() => onNavigate('shop', { category: 'kanjivaram-sarees' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Kanjivaram Silk</button></li>
+                <li><button onClick={() => onNavigate('shop', { category: 'silk-sarees' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Pure Silk Sarees</button></li>
+                <li><button onClick={() => onNavigate('shop', { category: 'organza-sarees' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Organza Sarees</button></li>
+                <li><button onClick={() => onNavigate('shop', { category: 'cotton-sarees' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Cotton & Handloom</button></li>
+                <li><button onClick={() => onNavigate('shop', { category: 'bridal-collection' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Bridal Trousseau</button></li>
+                <li><button onClick={() => onNavigate('offers')} className="min-h-[44px] py-2 px-1 text-[#C5A059] font-medium text-left flex items-center w-full cursor-pointer">Offers & Festive Deals</button></li>
+              </ul>
+            )}
+          </div>
+
+          {/* 2. Customer Care Accordion */}
+          <div className="border-b border-white/10 pb-2">
+            <button
+              onClick={() => toggleSection('care')}
+              aria-expanded={openSection === 'care'}
+              className="w-full min-h-[44px] flex items-center justify-between py-3 text-xs font-serif font-bold uppercase tracking-wider text-[#C5A059] cursor-pointer"
+            >
+              <span>Customer Care</span>
+              {openSection === 'care' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {openSection === 'care' && (
+              <ul className="space-y-1 text-xs text-[#FAF7F2]/80 pb-3 pl-2 animate-fade-in">
+                <li><button onClick={() => onNavigate('track-order')} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Track Order Shipment</button></li>
+                <li><button onClick={() => onNavigate('account')} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">My Orders & Account</button></li>
+                <li><button onClick={() => onNavigate('wishlist')} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Saved Wishlist</button></li>
+                <li className="pt-2 border-t border-white/10 space-y-1.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[#C5A059]">Direct Phone Helplines</div>
+                  <div className="flex flex-col gap-1">
+                    <a href="tel:+918897776984" className="min-h-[44px] flex items-center gap-2 text-xs text-[#FAF7F2]/90 hover:text-[#C5A059] transition">
+                      <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                      <span>Concierge: +91 88977 76984</span>
+                    </a>
+                    <a href="tel:+918498854323" className="min-h-[44px] flex items-center gap-2 text-xs text-[#FAF7F2]/90 hover:text-[#C5A059] transition">
+                      <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                      <span>Care: +91 84988 54323</span>
+                    </a>
+                    <a href="tel:+918106789789" className="min-h-[44px] flex items-center gap-2 text-xs text-[#FAF7F2]/90 hover:text-[#C5A059] transition">
+                      <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                      <span>Support & Orders: +91 81067 89789</span>
+                    </a>
+                    <a href="mailto:info@palluvo.store" className="min-h-[44px] flex items-center gap-2 text-xs text-[#FAF7F2]/90 hover:text-[#C5A059] transition">
+                      <Mail className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                      <span>Email: info@palluvo.store</span>
+                    </a>
+                  </div>
+                  <div className="text-[10px] text-[#FAF7F2]/60 pt-0.5">Hours: Mon-Sat, 10 AM - 8 PM IST</div>
+                </li>
+              </ul>
+            )}
+          </div>
+
+          {/* 3. About PALLUVO Accordion */}
+          <div className="border-b border-white/10 pb-2">
+            <button
+              onClick={() => toggleSection('about')}
+              aria-expanded={openSection === 'about'}
+              className="w-full min-h-[44px] flex items-center justify-between py-3 text-xs font-serif font-bold uppercase tracking-wider text-[#C5A059] cursor-pointer"
+            >
+              <span>About PALLUVO</span>
+              {openSection === 'about' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {openSection === 'about' && (
+              <ul className="space-y-1 text-xs text-[#FAF7F2]/80 pb-3 pl-2 animate-fade-in">
+                <li><button onClick={() => onNavigate('about', { tab: 'heritage' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Our Handloom Heritage</button></li>
+                <li><button onClick={() => onNavigate('about', { tab: 'artisans' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Artisans & Weavers</button></li>
+                <li><button onClick={() => onNavigate('about', { tab: 'care' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Saree Care & Storage Guide</button></li>
+                <li><button onClick={() => onNavigate('about', { tab: 'sustainability' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Sustainable Silk Pledge</button></li>
+              </ul>
+            )}
+          </div>
+
+          {/* 4. Policies Accordion */}
+          <div className="border-b border-white/10 pb-2">
+            <button
+              onClick={() => toggleSection('policies')}
+              aria-expanded={openSection === 'policies'}
+              className="w-full min-h-[44px] flex items-center justify-between py-3 text-xs font-serif font-bold uppercase tracking-wider text-[#C5A059] cursor-pointer"
+            >
+              <span>Policies & Legal</span>
+              {openSection === 'policies' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {openSection === 'policies' && (
+              <ul className="space-y-1 text-xs text-[#FAF7F2]/80 pb-3 pl-2 animate-fade-in">
+                <li><button onClick={() => onNavigate('policy', { tab: 'privacy' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Privacy Policy</button></li>
+                <li><button onClick={() => onNavigate('policy', { tab: 'terms' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Terms & Conditions</button></li>
+                <li><button onClick={() => onNavigate('policy', { tab: 'shipping' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">Shipping Policy</button></li>
+                <li><button onClick={() => onNavigate('policy', { tab: 'refund' })} className="min-h-[44px] py-2 px-1 hover:text-[#C5A059] text-left flex items-center w-full cursor-pointer">7-Day Return Policy</button></li>
+              </ul>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Multi-column Grid */}
+        <div className="hidden lg:grid grid-cols-4 gap-10 border-t border-white/10 pt-10">
+          {/* Shop */}
+          <div className="space-y-3">
+            <h4 className="font-serif font-bold text-sm text-[#C5A059] tracking-wider uppercase">
+              Shop Collections
+            </h4>
+            <ul className="space-y-1 text-xs text-[#FAF7F2]/80">
+              <li><button onClick={() => onNavigate('shop', { category: 'banarasi-sarees' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Banarasi Sarees</button></li>
+              <li><button onClick={() => onNavigate('shop', { category: 'kanjivaram-sarees' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Kanjivaram Silk</button></li>
+              <li><button onClick={() => onNavigate('shop', { category: 'silk-sarees' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Pure Silk Sarees</button></li>
+              <li><button onClick={() => onNavigate('shop', { category: 'organza-sarees' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Organza & Tissue</button></li>
+              <li><button onClick={() => onNavigate('shop', { category: 'cotton-sarees' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Cotton & Handloom</button></li>
+              <li><button onClick={() => onNavigate('shop', { category: 'bridal-collection' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Bridal Trousseau</button></li>
+              <li><button onClick={() => onNavigate('offers')} className="min-h-[44px] py-2 text-[#C5A059] font-medium hover:underline transition text-left flex items-center cursor-pointer">Offers & Festive Deals</button></li>
+            </ul>
+          </div>
+
+          {/* Customer Care */}
+          <div className="space-y-3">
+            <h4 className="font-serif font-bold text-sm text-[#C5A059] tracking-wider uppercase">
+              Customer Care
+            </h4>
+            <ul className="space-y-1 text-xs text-[#FAF7F2]/80">
+              <li><button onClick={() => onNavigate('track-order')} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Track Order Shipment</button></li>
+              <li><button onClick={() => onNavigate('account')} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">My Orders & Account</button></li>
+              <li><button onClick={() => onNavigate('wishlist')} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Saved Wishlist</button></li>
+              <li className="pt-2 border-t border-white/10 space-y-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-[#C5A059]">Direct Helplines</div>
+                <a
+                  href="tel:+918897776984"
+                  className="min-h-[44px] hover:text-[#C5A059] transition flex items-center gap-2 text-left cursor-pointer text-[#FAF7F2]/90 font-medium py-2 px-1 rounded-md hover:bg-white/5"
+                >
+                  <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                  <span>+91 88977 76984 <span className="text-[10px] text-[#C5A059] font-normal">(Concierge)</span></span>
+                </a>
+                <a
+                  href="tel:+918498854323"
+                  className="min-h-[44px] hover:text-[#C5A059] transition flex items-center gap-2 text-left cursor-pointer text-[#FAF7F2]/90 font-medium py-2 px-1 rounded-md hover:bg-white/5"
+                >
+                  <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                  <span>+91 84988 54323 <span className="text-[10px] text-[#C5A059] font-normal">(Care)</span></span>
+                </a>
+                <a
+                  href="tel:+918106789789"
+                  className="min-h-[44px] hover:text-[#C5A059] transition flex items-center gap-2 text-left cursor-pointer text-[#FAF7F2]/90 font-medium py-2 px-1 rounded-md hover:bg-white/5"
+                >
+                  <Phone className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                  <span>+91 81067 89789 <span className="text-[10px] text-[#C5A059] font-normal">(Support & Orders)</span></span>
+                </a>
+                <a
+                  href="mailto:info@palluvo.store"
+                  className="min-h-[44px] hover:text-[#C5A059] transition flex items-center gap-2 text-left cursor-pointer text-[#FAF7F2]/90 font-medium py-2 px-1 rounded-md hover:bg-white/5"
+                >
+                  <Mail className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                  <span>info@palluvo.store</span>
+                </a>
+                <div className="text-[10px] text-[#FAF7F2]/60 pt-0.5 px-1">Mon–Sat, 10:00 AM – 8:00 PM IST</div>
+              </li>
+            </ul>
+          </div>
+
+          {/* About PALLUVO */}
+          <div className="space-y-3">
+            <h4 className="font-serif font-bold text-sm text-[#C5A059] tracking-wider uppercase">
+              About PALLUVO
+            </h4>
+            <ul className="space-y-1 text-xs text-[#FAF7F2]/80">
+              <li><button onClick={() => onNavigate('about', { tab: 'heritage' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Our Handloom Heritage</button></li>
+              <li><button onClick={() => onNavigate('about', { tab: 'artisans' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Artisans & Weavers</button></li>
+              <li><button onClick={() => onNavigate('about', { tab: 'care' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Saree Care & Storage Guide</button></li>
+              <li><button onClick={() => onNavigate('about', { tab: 'sustainability' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Sustainable Silk Pledge</button></li>
+            </ul>
+          </div>
+
+          {/* Policies & Socials */}
+          <div className="space-y-3">
+            <h4 className="font-serif font-bold text-sm text-[#C5A059] tracking-wider uppercase">
+              Policies
+            </h4>
+            <ul className="space-y-1 text-xs text-[#FAF7F2]/80">
+              <li><button onClick={() => onNavigate('policy', { tab: 'privacy' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Privacy Policy</button></li>
+              <li><button onClick={() => onNavigate('policy', { tab: 'terms' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Terms & Conditions</button></li>
+              <li><button onClick={() => onNavigate('policy', { tab: 'shipping' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">Shipping Policy</button></li>
+              <li><button onClick={() => onNavigate('policy', { tab: 'refund' })} className="min-h-[44px] py-2 hover:text-[#C5A059] transition text-left flex items-center cursor-pointer">7-Day Refund Policy</button></li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Social Icons & Contact Information */}
+        <div className="pt-8 sm:pt-10 mt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-xs text-[#FAF7F2]/80">
+            <span className="text-[#C5A059] font-medium">Follow PALLUVO:</span>
+            <div className="flex gap-2.5">
+              <a
+                href="https://www.instagram.com/palluvo_official"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] bg-white/10 rounded-full hover:text-[#C5A059] hover:bg-white/20 transition flex items-center justify-center cursor-pointer"
+                aria-label="Follow PALLUVO on Instagram"
+                title="Instagram"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+                </svg>
+              </a>
+              <a
+                href="https://www.facebook.com/palluvo.official"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] bg-white/10 rounded-full hover:text-[#C5A059] hover:bg-white/20 transition flex items-center justify-center cursor-pointer"
+                aria-label="Follow PALLUVO on Facebook"
+                title="Facebook"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                </svg>
+              </a>
+              <a
+                href="https://www.pinterest.com/palluvo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] bg-white/10 rounded-full hover:text-[#C5A059] hover:bg-white/20 transition flex items-center justify-center cursor-pointer"
+                aria-label="Follow PALLUVO on Pinterest"
+                title="Pinterest"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <div className="text-xs text-[#FAF7F2]/70 flex items-center justify-center sm:justify-end gap-1.5 min-h-[44px]">
+            <MapPin className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+            <span>Warangal Master Vault & Fulfillment Hub</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Copyright */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 border-t border-white/10 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between text-xs text-[#FAF7F2]/60 gap-3">
+        <div>
+          © {new Date().getFullYear()} <strong>PALLUVO LUXURY FASHION PVT. LTD.</strong> All Rights Reserved.
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1 text-[11px]">
+          <button onClick={() => onNavigate('policy', { tab: 'privacy' })} className="min-h-[44px] px-2 hover:text-[#C5A059] transition cursor-pointer inline-flex items-center">Privacy</button>
+          <button onClick={() => onNavigate('policy', { tab: 'terms' })} className="min-h-[44px] px-2 hover:text-[#C5A059] transition cursor-pointer inline-flex items-center">Terms</button>
+          <button onClick={() => onNavigate('policy', { tab: 'shipping' })} className="min-h-[44px] px-2 hover:text-[#C5A059] transition cursor-pointer inline-flex items-center">Shipping</button>
+          <button onClick={() => onNavigate('policy', { tab: 'refund' })} className="min-h-[44px] px-2 hover:text-[#C5A059] transition cursor-pointer inline-flex items-center">Returns</button>
+        </div>
+      </div>
+    </footer>
+  );
+}

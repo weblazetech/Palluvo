@@ -1,0 +1,49 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build --prefix client",
+  "outputDirectory": "client/dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "crons": [
+    {
+      "path": "/api/payments/reconcile",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/sarees",
+      "has": [
+        {
+          "type": "query",
+          "key": "category",
+          "value": "(?<slug>[^&]+)"
+        }
+      ],
+      "destination": "/sarees/category-:slug.html"
+    },
+    {
+      "source": "/shop",
+      "has": [
+        {
+          "type": "query",
+          "key": "category",
+          "value": "(?<slug>[^&]+)"
+        }
+      ],
+      "destination": "/sarees/category-:slug.html"
+    },
+    {
+      "source": "/sarees/:slug",
+      "destination": "/api/render?path=/sarees/:slug"
+    },
+    {
+      "source": "/product/:slug",
+      "destination": "/api/render?path=/product/:slug"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+/* PALLUVO Luxury Styling & Mobile Responsive Rules */
+.safe-area-pb {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 640px) {
+  /* Prevent touch zoom on input focus while remaining accessible */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
