@@ -16,7 +16,7 @@ export const CollectionBanner: React.FC = () => {
               src="/images/banners/festive-edit-banner.jpg"
               alt="The Festive Edit"
               fill
-              priority
+              sizes="(max-width: 1280px) 100vw, 1280px"
               className="object-cover object-right sm:object-center"
             />
             {/* Dark gradient overlay on the left so copy is readable */}
@@ -38,7 +38,7 @@ export const CollectionBanner: React.FC = () => {
 
             <div className="pt-3">
               <Link
-                href="/shop?category=Festive+Sarees"
+                href="/shop?category=Festive"
                 className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all border border-[#C5A575]/40"
               >
                 <span>Shop Festive</span>

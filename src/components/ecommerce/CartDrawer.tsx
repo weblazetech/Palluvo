@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag } from "lucide-react";
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Tag, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { getProductType } from "@/data/products";
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -24,8 +26,52 @@ export const CartDrawer: React.FC = () => {
     formatPrice,
   } = useStore();
 
+  const isAllSarees = cart.length > 0 && cart.every((item) => getProductType(item.product) === "saree");
+
   const [inputCoupon, setInputCoupon] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
+  const itemListRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<{
+    x: number;
+    y: number;
+    initialScrollTop: number;
+  } | null>(null);
+
+  const closeCart = useCallback(() => setIsCartOpen(false), [setIsCartOpen]);
+  const drawerRef = useFocusTrap<HTMLDivElement>({ isOpen: isCartOpen, onClose: closeCart });
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setTouchStart({
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        initialScrollTop: itemListRef.current ? itemListRef.current.scrollTop : 0,
+      });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart || e.changedTouches.length === 0) return;
+    const deltaX = e.changedTouches[0].clientX - touchStart.x;
+    const deltaY = e.changedTouches[0].clientY - touchStart.y;
+    const currentScrollTop = itemListRef.current ? itemListRef.current.scrollTop : 0;
+
+    // Horizontal swipe-to-dismiss (swipe right > 70px with limited vertical drift)
+    const isHorizontalDismiss = deltaX > 70 && Math.abs(deltaY) < 55;
+
+    // Downward swipe-to-dismiss: ONLY permitted when the list started at scrollTop 0,
+    // remains at scrollTop 0, and the gesture is predominantly vertical (> 70px with limited horizontal drift)
+    const isDownwardDismiss =
+      deltaY > 70 &&
+      Math.abs(deltaX) < 55 &&
+      touchStart.initialScrollTop <= 0 &&
+      currentScrollTop <= 0;
+
+    if (isHorizontalDismiss || isDownwardDismiss) {
+      closeCart();
+    }
+    setTouchStart(null);
+  };
 
   if (!isCartOpen) return null;
 
@@ -45,11 +91,20 @@ export const CartDrawer: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+    <div
+      ref={drawerRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 overflow-hidden outline-none"
+      aria-labelledby="slide-over-title"
+      role="dialog"
+      aria-modal="true"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-        onClick={() => setIsCartOpen(false)}
+        onClick={closeCart}
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
@@ -59,13 +114,13 @@ export const CartDrawer: React.FC = () => {
           <div className="px-6 py-4 border-b border-[#E8E2D9] flex items-center justify-between bg-[#F4EFE6]">
             <div className="flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-[#541920]" />
-              <h2 className="text-lg font-serif tracking-wide font-medium">
+              <h2 id="slide-over-title" className="text-lg font-serif tracking-wide font-medium">
                 Shopping Bag ({cart.reduce((sum, item) => sum + item.quantity, 0)})
               </h2>
             </div>
             <button
               onClick={() => setIsCartOpen(false)}
-              className="p-1.5 text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors"
               aria-label="Close cart"
             >
               <X className="w-5 h-5" />
@@ -76,18 +131,48 @@ export const CartDrawer: React.FC = () => {
           <div className="bg-[#FAF7F2] px-6 py-3 border-b border-[#E8E2D9]">
             <div className="text-xs text-neutral-600 mb-1.5 flex justify-between font-sans">
               {freeShippingLeft === 0 ? (
-                <span className="text-[#15803D] font-medium flex items-center gap-1">
-                  🎉 You have unlocked FREE Express Shipping!
+                <span className="text-[#15803D] font-medium flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#15803D] shrink-0" />
+                  <span>
+                    {appliedCoupon === "PALLUVO10"
+                      ? "You have unlocked FREE Express Shipping with coupon PALLUVO10!"
+                      : "You have unlocked FREE Standard Shipping!"}
+                  </span>
                 </span>
               ) : (
                 <span>
-                  Add <strong className="text-[#541920]">{formatPrice(freeShippingLeft)}</strong> more to get{" "}
-                  <strong>FREE Shipping</strong>
+                  Add <strong className="text-[#541920] tabular-nums">{formatPrice(freeShippingLeft)}</strong> more to get{" "}
+                  <strong>
+                    {appliedCoupon === "PALLUVO10" ? "FREE Express Shipping" : "FREE Shipping"}
+                  </strong>
+                  {appliedCoupon === "PALLUVO10" ? " with coupon PALLUVO10" : ""}
                 </span>
               )}
               <span className="font-semibold text-neutral-700">{progressPercent}%</span>
             </div>
-            <div className="w-full bg-[#E5DFD5] h-1.5 rounded-full overflow-hidden">
+            <div
+              role="progressbar"
+              aria-label={
+                appliedCoupon === "PALLUVO10"
+                  ? "Free express shipping progress"
+                  : "Free shipping progress"
+              }
+              aria-valuenow={progressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuetext={
+                freeShippingLeft === 0
+                  ? appliedCoupon === "PALLUVO10"
+                    ? "Free express shipping unlocked with coupon PALLUVO10"
+                    : "Free standard shipping unlocked"
+                  : `Add ${formatPrice(freeShippingLeft)} more to get ${
+                      appliedCoupon === "PALLUVO10"
+                        ? "free express shipping with coupon PALLUVO10"
+                        : "free shipping"
+                    }`
+              }
+              className="w-full bg-[#E5DFD5] h-1.5 rounded-full overflow-hidden"
+            >
               <div
                 className="bg-[#541920] h-full transition-all duration-500 rounded-full"
                 style={{ width: `${progressPercent}%` }}
@@ -96,29 +181,29 @@ export const CartDrawer: React.FC = () => {
           </div>
 
           {/* Items List */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 divide-y divide-[#EFEAE1]">
+          <div ref={itemListRef} className="flex-1 overflow-y-auto px-6 py-4 space-y-4 divide-y divide-[#EFEAE1]">
             {cart.length === 0 ? (
               <div className="py-16 text-center space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-neutral-400">
-                  <ShoppingBag className="w-8 h-8" />
+                <div className="w-16 h-16 mx-auto rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#541920]">
+                  <ShoppingBag className="w-8 h-8 text-[#541920]" />
                 </div>
                 <div>
                   <h3 className="font-serif text-lg text-neutral-800">Your bag is empty</h3>
-                  <p className="text-xs text-neutral-500 mt-1 max-w-xs mx-auto">
-                    Explore our handpicked collection of royal weaves and artisanal sarees.
+                  <p className="text-xs text-neutral-600 mt-1 max-w-xs mx-auto">
+                    Explore our handpicked collection of royal weaves and artisanal creations.
                   </p>
                 </div>
                 <Link
                   href="/shop"
                   onClick={() => setIsCartOpen(false)}
-                  className="inline-block px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-colors rounded-sm"
+                  className="min-h-[44px] inline-flex items-center justify-center px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-colors rounded-xs"
                 >
-                  Explore Sarees
+                  Explore Products
                 </Link>
               </div>
             ) : (
               cart.map((item) => (
-                <div key={`${item.product.id}-${item.selectedColor || 'def'}`} className="pt-4 first:pt-0 flex gap-3.5">
+                <div key={`${item.product.id}-${item.selectedColor || 'def'}-${item.blouseOption || 'none'}`} className="pt-4 first:pt-0 flex gap-3.5">
                   {/* Thumbnail */}
                   <Link
                     href={`/product/${item.product.id}`}
@@ -141,13 +226,13 @@ export const CartDrawer: React.FC = () => {
                         <Link
                           href={`/product/${item.product.id}`}
                           onClick={() => setIsCartOpen(false)}
-                          className="text-xs font-serif font-medium text-neutral-900 line-clamp-1 hover:text-[#541920]"
+                          className="text-xs font-serif font-medium text-neutral-900 line-clamp-2 leading-snug hover:text-[#541920]"
                         >
                           {item.product.name}
                         </Link>
                         <button
-                          onClick={() => removeFromCart(item.product.id, item.selectedColor)}
-                          className="text-neutral-400 hover:text-red-600 transition-colors p-0.5"
+                          onClick={() => removeFromCart(item.product.id, item.selectedColor, item.blouseOption)}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] -mr-2 -mt-2 inline-flex items-center justify-center text-neutral-600 hover:text-red-600 transition-colors shrink-0"
                           title="Remove item"
                           aria-label={`Remove ${item.product.name} from cart`}
                         >
@@ -155,21 +240,21 @@ export const CartDrawer: React.FC = () => {
                         </button>
                       </div>
 
-                      <div className="text-[11px] text-neutral-500 mt-0.5 space-x-2">
+                      <div className="text-[11px] text-neutral-600 mt-0.5 space-x-2">
                         {item.selectedColor && (
-                          <span>Color: <strong className="text-neutral-700">{item.selectedColor}</strong></span>
+                          <span>Color: <strong className="text-neutral-800">{item.selectedColor}</strong></span>
                         )}
                         {item.blouseOption && (
-                          <span>• Blouse: <strong className="text-neutral-700">{item.blouseOption.split(" ")[0]}</strong></span>
+                          <span>• Blouse: <strong className="text-neutral-800">{item.blouseOption}</strong></span>
                         )}
                       </div>
 
-                      <div className="mt-1 flex items-baseline gap-2">
-                        <span className="text-xs font-semibold text-[#541920]">
+                      <div className="mt-1 flex items-baseline gap-2 tabular-nums">
+                        <span className="text-xs font-semibold text-[#541920] tabular-nums">
                           {formatPrice(item.product.price)}
                         </span>
                         {item.product.originalPrice && (
-                          <span className="text-[10px] text-neutral-400 line-through">
+                          <span className="text-[10px] text-neutral-600 line-through tabular-nums">
                             {formatPrice(item.product.originalPrice)}
                           </span>
                         )}
@@ -178,26 +263,33 @@ export const CartDrawer: React.FC = () => {
 
                     {/* Quantity controls */}
                     <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center border border-[#DCD5C9] rounded-sm bg-white">
+                      <div className="flex items-center border border-[#DCD5C9] rounded-xs bg-white">
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor)}
-                          className="p-1 px-2 text-neutral-600 hover:text-black hover:bg-neutral-100"
-                          aria-label="Decrease quantity"
+                          type="button"
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedColor, item.blouseOption)}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                          aria-label={`Decrease quantity of ${item.product.name}`}
                         >
-                          <Minus className="w-3 h-3" />
+                          <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="px-2 text-xs font-medium min-w-[20px] text-center" aria-label={`Quantity: ${item.quantity}`}>
+                        <span className="min-w-[28px] px-1 text-center text-xs font-semibold text-neutral-900 select-none tabular-nums" aria-label={`Quantity: ${item.quantity}`}>
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedColor)}
-                          className="p-1 px-2 text-neutral-600 hover:text-black hover:bg-neutral-100"
-                          aria-label="Increase quantity"
+                          type="button"
+                          disabled={item.quantity >= 99}
+                          onClick={() => updateQuantity(item.product.id, Math.min(99, item.quantity + 1), item.selectedColor, item.blouseOption)}
+                          className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                            item.quantity >= 99
+                              ? "text-neutral-300 cursor-not-allowed"
+                              : "text-neutral-600 hover:text-black hover:bg-neutral-100 cursor-pointer"
+                          }`}
+                          aria-label={`Increase quantity of ${item.product.name}`}
                         >
-                          <Plus className="w-3 h-3" />
+                          <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <span className="text-xs font-medium text-neutral-800">
+                      <span className="text-xs font-medium text-neutral-800 tabular-nums">
                         {formatPrice(item.product.price * item.quantity)}
                       </span>
                     </div>
@@ -215,57 +307,70 @@ export const CartDrawer: React.FC = () => {
                 <div className="flex items-center justify-between bg-[#EAE2D5] px-3 py-2 rounded-sm text-xs">
                   <div className="flex items-center gap-1.5 text-[#541920]">
                     <Tag className="w-3.5 h-3.5" />
-                    <span>Coupon <strong>{appliedCoupon}</strong> applied (-{formatPrice(discountAmount)})</span>
+                    <span>Coupon <strong>{appliedCoupon}</strong> applied (-<span className="tabular-nums">{formatPrice(discountAmount)}</span>)</span>
                   </div>
                   <button
                     onClick={removeCoupon}
-                    className="text-neutral-500 hover:text-black font-semibold text-[11px]"
+                    className="min-h-[44px] px-2 text-neutral-600 hover:text-black font-semibold text-[11px] inline-flex items-center"
                   >
                     Remove
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleApplyCoupon} className="space-y-1">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Coupon Code (use PALLUVO10)"
-                      value={inputCoupon}
-                      onChange={(e) => setInputCoupon(e.target.value.toUpperCase())}
-                      className="flex-1 px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-sm focus:outline-none focus:border-[#541920]"
-                    />
-                    <button
-                      type="submit"
-                      className="px-3.5 py-2 bg-neutral-900 text-white text-xs uppercase tracking-wider font-medium hover:bg-black rounded-sm"
-                    >
-                      Apply
-                    </button>
+                <form onSubmit={handleApplyCoupon} className="space-y-1.5">
+                  <div>
+                    <label htmlFor="cart-drawer-coupon" className="block text-xs font-semibold text-neutral-800 mb-1">
+                      Coupon Code <span className="text-[11px] font-normal text-neutral-600">(use PALLUVO10 for 10% off)</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        id="cart-drawer-coupon"
+                        name="couponCode"
+                        type="text"
+                        placeholder="e.g. PALLUVO10"
+                        aria-invalid={Boolean(couponError)}
+                        aria-describedby={couponError ? "cart-drawer-coupon-error" : undefined}
+                        value={inputCoupon}
+                        onChange={(e) => setInputCoupon(e.target.value.toUpperCase())}
+                        className="flex-1 min-h-[44px] px-3 py-2 text-xs bg-white border border-[#DCD5C9] rounded-xs focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] placeholder:text-neutral-500 font-mono uppercase"
+                      />
+                      <button
+                        type="submit"
+                        className="min-h-[44px] px-4 py-2 bg-neutral-900 text-white text-xs uppercase tracking-wider font-semibold hover:bg-black rounded-xs shrink-0 cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      >
+                        Apply
+                      </button>
+                    </div>
                   </div>
-                  {couponError && <p className="text-[11px] text-red-600">{couponError}</p>}
+                  {couponError && (
+                    <p id="cart-drawer-coupon-error" role="alert" className="text-[11px] text-red-600 mt-1">
+                      {couponError}
+                    </p>
+                  )}
                 </form>
               )}
 
               {/* Subtotals */}
-              <div className="space-y-1.5 text-xs text-neutral-600 pt-1">
+              <div className="space-y-1.5 text-xs text-neutral-600 pt-1 tabular-nums">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="text-neutral-900 font-medium">{formatPrice(subtotal)}</span>
+                  <span className="text-neutral-900 font-medium tabular-nums">{formatPrice(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-[#15803D]">
                     <span>Discount</span>
-                    <span>-{formatPrice(discountAmount)}</span>
+                    <span className="tabular-nums">-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>Estimated Shipping</span>
-                  <span className="text-neutral-900 font-medium">
+                  <span className="text-neutral-900 font-medium tabular-nums">
                     {shippingFee === 0 ? <span className="text-[#15803D]">FREE</span> : formatPrice(shippingFee)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold text-neutral-900 pt-2 border-t border-[#E8E2D9]">
                   <span>Total Amount</span>
-                  <span className="text-[#541920]">{formatPrice(finalTotal)}</span>
+                  <span className="text-[#541920] tabular-nums">{formatPrice(finalTotal)}</span>
                 </div>
               </div>
 
@@ -274,7 +379,7 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/checkout"
                   onClick={() => setIsCartOpen(false)}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-medium hover:bg-[#3D1217] transition-all rounded-sm shadow-sm"
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold hover:bg-[#3D1217] transition-all rounded-xs shadow-sm cursor-pointer"
                 >
                   <span>Proceed to Checkout</span>
                   <ArrowRight className="w-4 h-4" />
@@ -283,15 +388,19 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/cart"
                   onClick={() => setIsCartOpen(false)}
-                  className="w-full block text-center py-2 text-xs text-neutral-600 hover:text-black uppercase tracking-wider underline font-sans"
+                  className="w-full min-h-[44px] flex items-center justify-center text-center py-2 text-xs text-neutral-600 hover:text-black uppercase tracking-wider underline font-sans rounded-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
                 >
                   View Full Cart Details
                 </Link>
               </div>
 
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-1">
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-700 font-medium pt-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#15803D]" />
-                <span>100% Authentic Handcrafted Sarees • Easy 7-Day Returns</span>
+                <span>
+                  {isAllSarees
+                    ? "100% Authentic Handcrafted Sarees • Easy 7-Day Returns"
+                    : "100% Authentic Handcrafted Products • Easy 7-Day Returns"}
+                </span>
               </div>
             </div>
           )}

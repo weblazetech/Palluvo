@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight, Award, Truck, RotateCcw, ShieldCheck } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 
 const SLIDES = [
   {
@@ -11,8 +11,11 @@ const SLIDES = [
     titleLine1: "Every drape,",
     titleLine2: "a little magic",
     description: "Discover sarees crafted for moments worth remembering.",
+    curationTag: "Bestseller",
+    categoryName: "Tissue Silk",
+    categoryHref: "/shop?category=Tissue+Silk",
     primaryCta: { label: "Shop Sarees", href: "/shop" },
-    secondaryCta: { label: "Explore New Arrivals", href: "/shop?sort=newest" },
+    secondaryCta: { label: "New Arrivals", href: "/shop?sort=newest" },
     image: "/images/hero-saree.jpg",
     product: {
       badge: "The Signature Drape",
@@ -28,8 +31,11 @@ const SLIDES = [
     titleLine1: "Royal heritage,",
     titleLine2: "timeless temple weaves",
     description: "Handcrafted pure silk Kanjeevarams woven with authentic gold zari motifs.",
-    primaryCta: { label: "Shop Kanjeevaram", href: "/shop?category=Silk" },
-    secondaryCta: { label: "View Bridal Edits", href: "/shop?category=Bridal" },
+    curationTag: "Popular",
+    categoryName: "Kanjeevaram",
+    categoryHref: "/shop?category=Kanjeevaram",
+    primaryCta: { label: "Shop Kanjeevaram", href: "/shop?category=Kanjeevaram" },
+    secondaryCta: { label: "Bridal Edits", href: "/shop?category=Bridal" },
     image: "/images/products/royal-blue-kanjeevaram.jpg",
     product: {
       badge: "Bridal Heirloom",
@@ -45,7 +51,10 @@ const SLIDES = [
     titleLine1: "Imperial elegance,",
     titleLine2: "pure Banarasi brocade",
     description: "Opulent crimson red Kadwa silk brocades curated for grand Indian weddings.",
-    primaryCta: { label: "Shop Banarasi", href: "/shop?category=Bridal" },
+    curationTag: "Trending",
+    categoryName: "Banarasi",
+    categoryHref: "/shop?category=Banarasi",
+    primaryCta: { label: "Shop Banarasi", href: "/shop?category=Banarasi" },
     secondaryCta: { label: "Explore Handloom", href: "/shop?category=Handloom" },
     image: "/images/products/red-banarasi-saree.jpg",
     product: {
@@ -53,7 +62,7 @@ const SLIDES = [
       name: "Red Banarasi Brocade Saree",
       price: "₹6,300",
       originalPrice: "₹8,000",
-      discount: "22% OFF",
+      discount: "21% OFF",
       href: "/product/pal-005",
     },
   },
@@ -61,141 +70,252 @@ const SLIDES = [
 
 export const HeroBanner: React.FC = () => {
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
-  const slide = SLIDES[currentSlideIdx];
+  const [isHovered, setIsHovered] = useState(false);
+  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
+  const [isFocusPaused, setIsFocusPaused] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [liveAnnouncement, setLiveAnnouncement] = useState("");
+  const isKeyboardFocusRef = useRef(false);
   const totalSlides = SLIDES.length;
+  const slide = SLIDES[currentSlideIdx];
+
+  // Distinguish keyboard navigation from pointer / touch clicks to prevent focus events
+  // triggered by mouse clicks from pre-empting or inverting the Pause button's toggle state.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Tab" || e.key.startsWith("Arrow")) {
+        isKeyboardFocusRef.current = true;
+      }
+    };
+    const handlePointerDown = () => {
+      isKeyboardFocusRef.current = false;
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("mousedown", handlePointerDown, true);
+    window.addEventListener("touchstart", handlePointerDown, true);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("mousedown", handlePointerDown, true);
+      window.removeEventListener("touchstart", handlePointerDown, true);
+    };
+  }, []);
+
+  // Detect user preference for reduced motion
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener?.("change", handleChange);
+    return () => {
+      mediaQuery.removeEventListener?.("change", handleChange);
+    };
+  }, []);
+
+  const isExplicitlyPaused = isManuallyPaused || isFocusPaused;
+  const isPaused = isHovered || isExplicitlyPaused || prefersReducedMotion;
+
+  // Auto-advance showcase slides every 4.5 seconds (does NOT trigger live announcements)
+  useEffect(() => {
+    if (isPaused) return;
+
+    const timer = setInterval(() => {
+      setCurrentSlideIdx((prev) => (prev + 1) % totalSlides);
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, [isPaused, totalSlides]);
+
+  // Handler for explicit, user-initiated slide changes (e.g. keyboard or click navigation)
+  const handleUserSelectSlide = (idx: number) => {
+    setCurrentSlideIdx(idx);
+    const targetSlide = SLIDES[idx];
+    setLiveAnnouncement(
+      `Slide ${idx + 1} of ${totalSlides}: ${targetSlide.titleLine1} ${targetSlide.titleLine2} - featuring ${targetSlide.product.name}`
+    );
+  };
+
+  const handleTogglePause = () => {
+    if (prefersReducedMotion) return;
+    if (isExplicitlyPaused) {
+      setIsManuallyPaused(false);
+      setIsFocusPaused(false);
+      setLiveAnnouncement("Carousel auto-rotation resumed");
+    } else {
+      setIsManuallyPaused(true);
+      setIsFocusPaused(false);
+      setLiveAnnouncement("Carousel paused");
+    }
+  };
 
   return (
-    <section className="relative bg-[#FAF7F2] overflow-hidden border-b border-[#E8E2D9]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-          
+    <section
+      className="relative bg-[#FAF7F2] overflow-hidden border-b border-[#E8E2D9]"
+      aria-roledescription="carousel"
+      aria-label="Featured Collections Carousel"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setIsHovered(false)}
+      onFocus={(e) => {
+        // WAI Carousel Pattern: When keyboard navigation enters the carousel, rotation stops
+        // persistently until explicitly restarted by the user.
+        if (isKeyboardFocusRef.current) {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setIsFocusPaused(true);
+          }
+        }
+      }}
+    >
+      {/* Screen-reader live announcement ONLY for user-initiated actions */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveAnnouncement}
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-4 sm:py-6 md:py-10 lg:py-16">
+        <div
+          role="group"
+          aria-roledescription="slide"
+          aria-label={`Slide ${currentSlideIdx + 1} of ${totalSlides}: ${slide.titleLine1} ${slide.titleLine2}`}
+          className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-8 lg:gap-12 items-center"
+        >
           {/* Left Column: Brand Copy & Direct CTAs */}
-          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-normal text-[#1C1A18] tracking-tight leading-[1.12]">
-              {slide.titleLine1} <br />
+          <div className="lg:col-span-6 space-y-2 sm:space-y-3.5 md:space-y-6 text-center lg:text-left">
+            <h1 className="text-base min-[380px]:text-lg sm:text-2xl md:text-3xl lg:text-[2.25rem] xl:text-[2.75rem] font-serif font-normal text-[#1C1A18] tracking-tight leading-snug sm:leading-[1.2]">
+              <span>{slide.titleLine1}</span>{" "}
               <span className="italic font-serif text-[#541920]">{slide.titleLine2}</span>
             </h1>
 
-            <p className="text-sm sm:text-base text-neutral-600 max-w-lg mx-auto lg:mx-0 leading-relaxed font-sans">
+            <p className="text-xs sm:text-sm md:text-base text-neutral-600 max-w-lg mx-auto lg:mx-0 leading-relaxed font-sans line-clamp-2 sm:line-clamp-none">
               {slide.description}
             </p>
-
-            {/* Main Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2">
-              <Link
-                href={slide.primaryCta.href}
-                className="w-full sm:w-auto px-8 py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 group"
-              >
-                <span>{slide.primaryCta.label}</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                href={slide.secondaryCta.href}
-                className="w-full sm:w-auto px-7 py-3.5 bg-white hover:bg-[#F4EFE6] text-neutral-900 border border-[#DCD5C9] text-xs uppercase tracking-widest font-semibold rounded-xs transition-colors text-center"
-              >
-                {slide.secondaryCta.label}
-              </Link>
-            </div>
-
-            {/* Slider navigation indicator 01 / 03 */}
-            <div className="pt-4 flex items-center justify-center lg:justify-start gap-4 text-xs font-mono text-neutral-600">
-              <div className="flex items-center gap-1 font-semibold text-neutral-900">
-                <span>0{currentSlideIdx + 1}</span>
-                <span className="text-neutral-400">/</span>
-                <span className="text-neutral-400">0{totalSlides}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setCurrentSlideIdx((idx) => (idx === 0 ? totalSlides - 1 : idx - 1))}
-                  className="p-1.5 rounded-full border border-[#DCD5C9] bg-white hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer"
-                  aria-label="Previous slide"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setCurrentSlideIdx((idx) => (idx === totalSlides - 1 ? 0 : idx + 1))}
-                  className="p-1.5 rounded-full border border-[#DCD5C9] bg-white hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer"
-                  aria-label="Next slide"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
           </div>
 
-          {/* Right Column: High Quality Saree Hero Image Showcase */}
-          <div className="lg:col-span-6 relative">
-            <div className="relative mx-auto max-w-md lg:max-w-none">
-              <div className="relative aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-100 border-4 border-white">
-                <Image
-                  key={slide.image}
-                  src={slide.image}
-                  alt={slide.product.name}
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 550px"
-                  className="object-cover object-top transition-opacity duration-300"
+          {/* Right Column: Full-Width Clean Saree Hero Image Showcase */}
+          <div className="lg:col-span-6 relative mt-1 lg:mt-0 w-full">
+            <div className="relative w-full">
+              <div
+                className="group relative w-full aspect-[4/5] md:aspect-[3/4] rounded-sm overflow-hidden shadow-2xl bg-neutral-900 border-2 sm:border-4 border-white block transition-all duration-300 ease-out hover:shadow-3xl focus-within:ring-2 focus-within:ring-[#541920]"
+              >
+                {/* Layered Cross-Fade Slide Images & Links */}
+                {SLIDES.map((item, idx) => {
+                  const isActive = idx === currentSlideIdx;
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.categoryHref}
+                      tabIndex={isActive ? 0 : -1}
+                      aria-hidden={!isActive}
+                      aria-label={`Explore ${item.categoryName} Collection`}
+                      className={`absolute inset-0 block transition-opacity duration-700 ease-in-out ${
+                        isActive
+                          ? "opacity-100 z-10 pointer-events-auto"
+                          : "opacity-0 z-0 pointer-events-none"
+                      }`}
+                    >
+                      <Image
+                        src={item.image}
+                        alt={item.product.name}
+                        fill
+                        priority={idx === 0}
+                        loading={idx === 0 ? "eager" : "lazy"}
+                        sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 600px"
+                        className="object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+                      />
+                    </Link>
+                  );
+                })}
+
+                {/* Subtle Gradient Scrim at Bottom for Badge & Dot Contrast */}
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-20"
+                  aria-hidden="true"
                 />
 
-                {/* Floating Product Highlight Card */}
-                <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md p-3.5 rounded-xs shadow-lg border border-[#E8E2D9] flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#541920]">
-                      {slide.product.badge}
-                    </span>
-                    <h3 className="text-xs sm:text-sm font-serif font-medium text-neutral-900">
-                      {slide.product.name}
-                    </h3>
-                    <div className="flex items-baseline gap-2 mt-0.5">
-                      <span className="text-xs font-bold text-[#541920]">{slide.product.price}</span>
-                      <span className="text-[11px] text-neutral-400 line-through">{slide.product.originalPrice}</span>
-                      <span className="text-[10px] text-[#15803D] font-bold">{slide.product.discount}</span>
-                    </div>
-                  </div>
+                {/* Bottom Overlay: Slide-Specific Curation Badge, Pagination Dots & Rotation Control */}
+                <div className="absolute bottom-3 sm:bottom-4 inset-x-0 z-30 flex flex-col items-center gap-2 sm:gap-2.5 px-4 pointer-events-none">
+                  {/* Dynamic Slide-Specific Curation Tag */}
+                  <span className="pointer-events-auto inline-flex items-center gap-1.5 bg-black/45 backdrop-blur-md text-white text-[10px] sm:text-xs font-medium tracking-wider uppercase px-3 py-1 rounded-full border border-white/20 shadow-sm transition-all hover:bg-black/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#E5A93C] shrink-0" aria-hidden="true" />
+                    <span>{slide.curationTag}</span>
+                  </span>
 
-                  <Link
-                    href={slide.product.href}
-                    className="px-3.5 py-2 bg-[#541920] hover:bg-[#3D1217] text-white text-[11px] uppercase tracking-wider font-semibold rounded-xs shadow-xs transition-colors shrink-0"
+                  {/* Controls: Pagination Indicator Dots & Accessible Pause/Play Button */}
+                  <div
+                    className="pointer-events-auto flex items-center justify-center gap-1 sm:gap-2"
+                    role="group"
+                    aria-label="Slide controls"
                   >
-                    View Saree
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                    <div
+                      className="flex items-center justify-center"
+                      role="group"
+                      aria-label="Slide selection"
+                    >
+                      {SLIDES.map((item, idx) => {
+                        const isActive = idx === currentSlideIdx;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            aria-label={`Slide ${idx + 1} of ${totalSlides}: ${item.product.name}`}
+                            aria-current={isActive ? "true" : undefined}
+                            onClick={() => handleUserSelectSlide(idx)}
+                            className="group relative flex items-center justify-center min-w-[44px] min-h-[44px] p-2 focus-visible:outline-none cursor-pointer"
+                          >
+                            <span
+                              className={`h-2.5 rounded-full transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-white group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-black/50 ${
+                                isActive
+                                  ? "w-6 sm:w-7 bg-white shadow-sm"
+                                  : "w-2.5 bg-white/40 group-hover:bg-white/70"
+                              }`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
 
-      {/* Trust Strip */}
-      <div className="bg-[#F4EFE6] border-t border-[#E8E2D9] py-3.5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2.5">
-              <Award className="w-5 h-5 text-[#541920] shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-neutral-900">Premium Fabrics</p>
-                <p className="text-[10px] text-neutral-500">Thoughtfully selected textiles</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-center md:justify-start gap-2.5">
-              <ShieldCheck className="w-5 h-5 text-[#541920] shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-neutral-900">Quality Checked</p>
-                <p className="text-[10px] text-neutral-500">Inspected before dispatch</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-center md:justify-start gap-2.5">
-              <Truck className="w-5 h-5 text-[#541920] shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-neutral-900">Secure Payments</p>
-                <p className="text-[10px] text-neutral-500">Safe & encrypted checkout</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-center md:justify-start gap-2.5">
-              <RotateCcw className="w-5 h-5 text-[#541920] shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-neutral-900">Easy Returns</p>
-                <p className="text-[10px] text-neutral-500">Simple return experience</p>
+                    {/* Visible & Keyboard-Accessible Pause / Resume Carousel Control */}
+                    <button
+                      type="button"
+                      onClick={handleTogglePause}
+                      disabled={prefersReducedMotion}
+                      aria-label={
+                        prefersReducedMotion
+                          ? "Auto-rotation disabled by system reduced motion preference"
+                          : isExplicitlyPaused
+                          ? "Resume auto-rotating carousel"
+                          : "Pause auto-rotating carousel"
+                      }
+                      aria-pressed={prefersReducedMotion || isExplicitlyPaused}
+                      className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/50 ${
+                        prefersReducedMotion
+                          ? "opacity-60 cursor-not-allowed text-white/60"
+                          : "text-white/90 hover:text-white cursor-pointer"
+                      }`}
+                    >
+                      <span className="w-8 h-8 rounded-full bg-black/45 backdrop-blur-md hover:bg-black/60 flex items-center justify-center border border-white/20 shadow-sm transition-all">
+                        {prefersReducedMotion || isExplicitlyPaused ? (
+                          <Play className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                        ) : (
+                          <Pause className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -204,3 +324,5 @@ export const HeroBanner: React.FC = () => {
     </section>
   );
 };
+
+

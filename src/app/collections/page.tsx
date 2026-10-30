@@ -1,9 +1,34 @@
-"use client";
-
+import type { Metadata } from "next";
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { BackToTopButton } from "@/components/common/BackToTopButton";
+import { SITE_URL } from "@/data/site";
+
+export const metadata: Metadata = {
+  title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+  description:
+    "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry.",
+  alternates: {
+    canonical: "/collections",
+  },
+  openGraph: {
+    title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+    description:
+      "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry.",
+    url: `${SITE_URL}/collections`,
+    siteName: "PALLUVO",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Curated Saree Collections & Heritage Edits | PALLUVO",
+    description:
+      "Explore PALLUVO's thematic collections of Indian textiles: The Silk Edit, Midnight Drapes, Festive Stories, and Everyday Poetry.",
+  },
+};
 
 const CURATED_COLLECTIONS = [
   {
@@ -58,12 +83,15 @@ const CURATED_COLLECTIONS = [
 
 export default function CollectionsPage() {
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
+    <div className="min-h-screen bg-[#FAF7F2] pb-20 sm:pb-12">
+      {/* Floating Back to Top Button */}
+      <BackToTopButton />
+
       {/* Header */}
       <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-10 sm:py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left">
-          <nav className="text-xs text-neutral-500 mb-2 flex items-center justify-center sm:justify-start gap-1.5 font-sans">
-            <Link href="/" className="hover:text-black">
+          <nav aria-label="Breadcrumb" className="text-xs text-neutral-600 mb-2 flex items-center justify-center sm:justify-start gap-1.5 font-sans">
+            <Link href="/" className="hover:text-black transition-colors">
               Home
             </Link>
             <span>/</span>
@@ -77,7 +105,7 @@ export default function CollectionsPage() {
             The PALLUVO Collections
           </h1>
           <p className="text-xs sm:text-sm text-neutral-600 mt-2 font-sans max-w-2xl">
-            Thematic explorations of Indian textiles — from celebratory gold zari brocades to lightweight twilight chiffons.
+            Thematic explorations of Indian textiles, from celebratory gold zari brocades to lightweight twilight chiffons.
           </p>
         </div>
       </div>
@@ -108,7 +136,7 @@ export default function CollectionsPage() {
 
               <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-4">
                 <div>
-                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#C5A575] block">
+                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#7C5C26] block">
                     {col.tagline}
                   </span>
                   <h2 className="font-serif text-2xl sm:text-3xl text-neutral-900 mt-1">
@@ -122,7 +150,7 @@ export default function CollectionsPage() {
                 <div className="pt-4 border-t border-[#E8E2D9]">
                   <Link
                     href={col.href}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors"
+                    className="min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer"
                   >
                     <span>Explore Collection</span>
                     <ArrowRight className="w-3.5 h-3.5" />

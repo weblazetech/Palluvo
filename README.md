@@ -1,4 +1,4 @@
-# PALLUVO — “Every drape, a little magic”
+# PALLUVO | "Every drape, a little magic"
 
 A luxury saree and drape fashion brand website built from scratch with an ultra-premium editorial magazine aesthetic inspired by contemporary Indian haute couture and international fashion publications.
 
@@ -73,3 +73,9 @@ Open [http://localhost:3000](http://localhost:3000) to view the site.
 npm run build
 npm run start
 ```
+
+### Dependency Security & Audits
+- **Production Audit**: The production dependency tree is verified with zero vulnerabilities (`npm run audit:prod`).
+- **Toolchain Security & Residual Risk Acceptance**: Upstream development dependencies (`eslint-config-next@16.4.0` → `braces@3.0.3` under [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)) are tracked. As documented in [SECURITY.md](SECURITY.md), this residual risk is explicitly accepted with a monitoring and re-evaluation plan to avoid breaking major-version downgrades (`14.2.35`) until an upstream patched release is available.
+
+

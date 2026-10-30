@@ -45,6 +45,7 @@ export interface Product {
   length?: string;
   blouseLength?: string;
   careInstructions?: string;
+  productType?: "saree" | "blouse" | "jewelry";
 }
 
 export interface LookItem {
@@ -217,6 +218,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isNewArrival: true,
+    isSilkMark: false,
     tags: ["cotton", "mustard", "yellow", "haldi"],
     origin: "Chanderi, Madhya Pradesh",
   },
@@ -226,7 +228,7 @@ export const PRODUCTS: Product[] = [
     fabric: "Pure Katan Silk",
     price: 6300,
     originalPrice: 8000,
-    discountPercent: 22,
+    discountPercent: 21,
     rating: 4.9,
     reviewsCount: 210,
     reviewCount: 210,
@@ -293,6 +295,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isTrending: true,
+    isSilkMark: false,
     tags: ["black", "chiffon", "party"],
     origin: "Surat, Gujarat",
   },
@@ -330,6 +333,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isNewArrival: true,
+    isSilkMark: false,
     tags: ["organza", "lavender", "party"],
     origin: "Kolkata, West Bengal",
   },
@@ -367,6 +371,7 @@ export const PRODUCTS: Product[] = [
     blouseOptions: ["With Blouse", "Without Blouse"],
     inStock: true,
     isNewArrival: true,
+    isSilkMark: false,
     tags: ["handloom", "ivory", "white", "temple"],
     origin: "Chettinad, Tamil Nadu",
   },
@@ -408,6 +413,79 @@ export const PRODUCTS: Product[] = [
     tags: ["silk", "green", "festive"],
     origin: "Kanchipuram, Tamil Nadu",
   },
+  {
+    id: "pal-010",
+    name: "Matching Wine Embroidered Blouse Piece",
+    fabric: "Embroidered Silk",
+    price: 999,
+    originalPrice: 1499,
+    discountPercent: 33,
+    rating: 4.8,
+    reviewsCount: 42,
+    reviewCount: 42,
+    category: "Silk",
+    color: "Wine",
+    colorHex: "#541920",
+    occasion: "Festive",
+    primaryImage: "/images/products/wine-blouse-piece.jpg",
+    hoverImage: "/images/products/wine-tissue-silk.jpg",
+    images: [
+      "/images/products/wine-blouse-piece.jpg",
+      "/images/products/wine-tissue-silk.jpg",
+    ],
+    description: "Complementary unstitched 0.8m designer embroidered silk blouse piece with matching gold zari work to complete your Wine Tissue Silk drape.",
+    details: {
+      length: "0.8 m unstitched",
+      blousePiece: "Self piece",
+      work: "Embroidered Gold Zari",
+      occasion: "Festive, Wedding",
+      careInstructions: "Dry clean only.",
+    },
+    colors: [
+      { name: "Wine", hex: "#541920" },
+    ],
+    hasBlousePiece: false,
+    inStock: true,
+    isSilkMark: false,
+    tags: ["blouse", "silk", "wine", "accessories"],
+    productType: "blouse",
+    origin: "Varanasi, India",
+  },
+  {
+    id: "pal-011",
+    name: "Temple Gold Plated Jhumkas",
+    fabric: "Brass & 22k Gold Micron Plating",
+    price: 1299,
+    originalPrice: 1999,
+    discountPercent: 35,
+    rating: 4.9,
+    reviewsCount: 56,
+    reviewCount: 56,
+    category: "Festive",
+    color: "Antique Gold",
+    colorHex: "#C5A575",
+    occasion: "Festive",
+    primaryImage: "/images/products/gold-jhumkas.jpg",
+    hoverImage: "/images/products/gold-jhumkas.jpg",
+    images: ["/images/products/gold-jhumkas.jpg"],
+    description: "Artisanal handcrafted temple jhumka earrings featuring delicate antique gold bead clusters and ornate floral studs.",
+    details: {
+      length: "5 cm drop",
+      blousePiece: "N/A",
+      work: "Handcrafted Temple Filigree",
+      occasion: "Festive, Wedding, Party",
+      careInstructions: "Keep away from water and perfume. Store in zip pouch.",
+    },
+    colors: [
+      { name: "Antique Gold", hex: "#C5A575" },
+    ],
+    hasBlousePiece: false,
+    inStock: true,
+    isSilkMark: false,
+    tags: ["jewelry", "jhumkas", "gold", "accessories"],
+    productType: "jewelry",
+    origin: "Jaipur, Rajasthan",
+  },
 ];
 
 export const SHOP_THE_LOOK_ITEMS: LookItem[] = [
@@ -425,21 +503,190 @@ export const SHOP_THE_LOOK_ITEMS: LookItem[] = [
   {
     id: "look-2",
     type: "Blouse",
-    name: "Matching Blouse Piece",
+    name: "Matching Wine Embroidered Blouse Piece",
     title: "Matching Blouse",
     role: "Blouse",
     price: 999,
-    image: "/images/products/wine-tissue-silk.jpg",
+    image: "/images/products/wine-blouse-piece.jpg",
     fabricOrMaterial: "Embroidered Silk (Unstitched 0.8m)",
+    productId: "pal-010",
   },
   {
     id: "look-3",
     type: "Jewelry",
-    name: "Gold Jhumkas",
+    name: "Temple Gold Plated Jhumkas",
     title: "Gold Jhumkas",
     role: "Accessories",
     price: 1299,
-    image: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=400&q=80",
+    image: "/images/products/gold-jhumkas.jpg",
     fabricOrMaterial: "Gold Plated Temple Jhumkas",
+    productId: "pal-011",
   },
 ];
+
+export type ProductType = "saree" | "blouse" | "jewelry";
+
+export function getProductType(product: Product): ProductType {
+  if (product.productType) {
+    return product.productType;
+  }
+  const tags = (product.tags || []).map((t) => t.toLowerCase());
+  const name = product.name.toLowerCase();
+  if (tags.includes("jewelry") || tags.includes("jhumkas") || name.includes("jhumka") || name.includes("jewelry")) {
+    return "jewelry";
+  }
+  if (tags.includes("blouse") || name.includes("blouse")) {
+    return "blouse";
+  }
+  return "saree";
+}
+
+export function getProductMetadataSuffix(product: Product): string {
+  const type = getProductType(product);
+  switch (type) {
+    case "blouse":
+      return `${product.fabric} handcrafted blouse piece.`;
+    case "jewelry":
+      return `Handcrafted jewelry in ${product.fabric}.`;
+    case "saree":
+    default:
+      return `${product.fabric} handcrafted saree.`;
+  }
+}
+
+export function getProductMetaDescription(product: Product, maxLength: number = 155): string {
+  const type = getProductType(product);
+  let descriptor = "";
+  switch (type) {
+    case "blouse":
+      descriptor = `${product.fabric} handcrafted blouse piece.`;
+      break;
+    case "jewelry":
+      descriptor = `Handcrafted jewelry in ${product.fabric}.`;
+      break;
+    case "saree":
+    default:
+      descriptor = `${product.fabric} handcrafted saree.`;
+      break;
+  }
+
+  const full = `${descriptor} ${product.description}`;
+  if (full.length <= maxLength) {
+    return full;
+  }
+
+  const budget = maxLength - 1; // space for ellipsis character
+  const sliced = full.slice(0, budget);
+  const lastSpace = sliced.lastIndexOf(" ");
+  const trimmed = lastSpace > descriptor.length ? sliced.slice(0, lastSpace) : sliced;
+  return `${trimmed.replace(/[.,:;—\s]+$/, "")}…`;
+}
+
+export function isSilkMarkCertified(product: Product): boolean {
+  return product.isSilkMark === true;
+}
+
+/**
+ * Curated pairings mapping product IDs to complementary, matching, or styling-related items.
+ * Supports cross-merchandising and useful discovery across sarees, blouses, and jewelry.
+ */
+export const CURATED_RELATED_PRODUCTS: Record<string, string[]> = {
+  // Wine Tissue Silk Saree -> pairs with matching blouse piece, temple jhumkas, and fellow silk/festive drapes
+  "pal-001": ["pal-010", "pal-011", "pal-008", "pal-003"],
+  // Royal Blue Kanjeevaram (Bridal) -> pairs with fellow bridal velvet saree, temple jewelry, and pure silks
+  "pal-002": ["pal-006", "pal-011", "pal-001", "pal-008"],
+  // Forest Green Banarasi (Handloom/Festive) -> pairs with festive chanderi, silk drapes, and temple jhumkas
+  "pal-003": ["pal-005", "pal-001", "pal-011", "pal-008"],
+  // Blush Pink Organza (Festive/Party) -> pairs with party wear georgette, chiffon, and pastel tissue silk
+  "pal-004": ["pal-007", "pal-009", "pal-001", "pal-005"],
+  // Mustard Yellow Chanderi (Festive/Handloom) -> pairs with handloom banarasi, festive organza, and temple jhumkas
+  "pal-005": ["pal-003", "pal-004", "pal-011", "pal-001"],
+  // Maroon Velvet Bridal (Bridal) -> pairs with royal bridal kanjeevaram, temple jhumkas, and rich tissue silk
+  "pal-006": ["pal-002", "pal-011", "pal-001", "pal-008"],
+  // Pastel Mint Floral (Party Wear) -> pairs with lavender chiffon, blush organza, and festive silk
+  "pal-007": ["pal-009", "pal-004", "pal-001", "pal-008"],
+  // Ivory Gold Zari (Silk) -> pairs with wine tissue silk, royal kanjeevaram, temple jhumkas, and banarasi
+  "pal-008": ["pal-001", "pal-002", "pal-011", "pal-003"],
+  // Lavender Chiffon (Party Wear) -> pairs with mint floral georgette, blush organza, and festive silk
+  "pal-009": ["pal-007", "pal-004", "pal-001", "pal-008"],
+  // Matching Wine Blouse Piece -> pairs with its matching wine tissue silk saree, temple jhumkas, and silk drapes
+  "pal-010": ["pal-001", "pal-011", "pal-008", "pal-002"],
+  // Temple Gold Plated Jhumkas (Jewelry) -> pairs with coordinating blouse piece, wine tissue saree, and bridal drapes
+  "pal-011": ["pal-010", "pal-001", "pal-002", "pal-006"],
+};
+
+/**
+ * Selects related product recommendations for a given product.
+ * Prioritizes curated pairings, then scores remaining catalog items by productType,
+ * category, occasion, and tag relevance rather than returning an arbitrary slice.
+ */
+export function getRelatedProducts(product: Product, limit: number = 4): Product[] {
+  const result: Product[] = [];
+  const seenIds = new Set<string>([product.id]);
+
+  // 1. Check curated pairings first
+  const curatedIds = CURATED_RELATED_PRODUCTS[product.id] || [];
+  for (const cid of curatedIds) {
+    if (!seenIds.has(cid)) {
+      const match = PRODUCTS.find((p) => p.id === cid);
+      if (match) {
+        result.push(match);
+        seenIds.add(cid);
+        if (result.length >= limit) return result;
+      }
+    }
+  }
+
+  // 2. Score remaining catalog candidates by relevance
+  const currentType = getProductType(product);
+  const candidates = PRODUCTS.filter((p) => !seenIds.has(p.id));
+
+  const scored = candidates.map((candidate) => {
+    let score = 0;
+    const candidateType = getProductType(candidate);
+
+    // Complementary accessory matching (blouse <-> jewelry or saree <-> accessory)
+    if (
+      (currentType === "blouse" && candidateType === "jewelry") ||
+      (currentType === "jewelry" && candidateType === "blouse")
+    ) {
+      score += 15;
+    }
+
+    // Matching product type (e.g. saree to saree, jewelry to jewelry)
+    if (candidateType === currentType) {
+      score += 12;
+    }
+
+    // Same category (e.g. Bridal to Bridal, Silk to Silk)
+    if (candidate.category === product.category) {
+      score += 20;
+    }
+
+    // Same occasion (e.g. Wedding to Wedding, Festive to Festive)
+    if (candidate.occasion === product.occasion) {
+      score += 10;
+    }
+
+    // Tag overlap
+    const currentTags = product.tags || [];
+    const candidateTags = candidate.tags || [];
+    for (const tag of currentTags) {
+      if (candidateTags.includes(tag)) {
+        score += 3;
+      }
+    }
+
+    return { product: candidate, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  for (const item of scored) {
+    result.push(item.product);
+    seenIds.add(item.product.id);
+    if (result.length >= limit) break;
+  }
+
+  return result;
+}

@@ -28,8 +28,6 @@
     background-color: var(--bg-ivory);
     color: var(--text-charcoal);
     overflow-x: hidden;
-    selection-background-color: #541920;
-    selection-color: #FAF7F2;
   }
 
   ::selection {
@@ -109,6 +107,23 @@
   animation: pulseSubtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Reduced motion preference support (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-slow-pan,
+  .animate-scroll-indicator {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
 /* Glassmorphism for sticky nav & modals */
 .glass-nav {
   background: rgba(250, 247, 242, 0.88);
@@ -137,4 +152,10 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Signed-in-only UI: html[data-auth] is set by an inline script before first paint (see layout.tsx)
+   and kept in sync by StoreContext, so these elements never cause post-hydration layout shift. */
+html:not([data-auth="in"]) .auth-only {
+  display: none !important;
 }

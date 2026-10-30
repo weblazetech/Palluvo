@@ -3,8 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { InstagramIcon } from "@/components/icons/BrandIcons";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, ArrowRight } from "lucide-react";
 
 const COMMUNITY_POSTS = [
   {
@@ -58,10 +57,6 @@ export const InstagramGrid: React.FC = () => {
         
         {/* Header */}
         <div className="text-center max-w-xl mx-auto mb-8 space-y-2">
-          <div className="flex items-center justify-center gap-1.5 text-xs uppercase tracking-widest text-[#541920] font-semibold">
-            <InstagramIcon className="w-4 h-4" />
-            <span>#PalluvoDrapes</span>
-          </div>
           <h2 className="text-2xl sm:text-3xl font-serif font-normal text-neutral-900">
             Styled by PALLUVO
           </h2>
@@ -76,7 +71,7 @@ export const InstagramGrid: React.FC = () => {
             <Link
               key={post.id}
               href={`/product/${post.productId}`}
-              className="group relative aspect-square sm:aspect-[4/5] rounded-sm overflow-hidden bg-neutral-100 block shadow-xs hover:shadow-lg transition-all duration-300 border border-[#E8E2D9]"
+              className="group relative aspect-square sm:aspect-[4/5] rounded-sm overflow-hidden bg-neutral-100 block shadow-xs hover:shadow-lg hover:-translate-y-1 active:scale-[0.98] transition-all duration-200 ease-out border border-[#E8E2D9]"
             >
               <Image
                 src={post.image}
@@ -85,11 +80,14 @@ export const InstagramGrid: React.FC = () => {
                 sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 16vw"
                 className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-end p-3 text-white text-center">
-                <ShoppingBag className="w-4 h-4 mb-1 text-[#C5A575]" />
-                <span className="text-[10px] font-sans font-medium text-neutral-200">{post.handle}</span>
-                <span className="text-[11px] font-serif font-semibold mt-0.5 line-clamp-1">{post.saree}</span>
-                <span className="text-[9px] uppercase tracking-wider text-[#C5A575] font-semibold mt-1">Shop Saree →</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent opacity-100 lg:opacity-0 lg:group-hover:opacity-100 [@media(hover:none)]:opacity-100 group-focus-visible:opacity-100 transition-opacity flex flex-col items-center justify-end p-2 sm:p-3 text-white text-center">
+                <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 mb-0.5 sm:mb-1 text-[#C5A575]" />
+                <span className="text-[10px] font-sans font-medium text-neutral-200 line-clamp-1">{post.handle}</span>
+                <span className="text-[10.5px] sm:text-[11px] font-serif font-semibold mt-0.5 line-clamp-2 leading-tight">{post.saree}</span>
+                <span className="text-[9px] uppercase tracking-wider text-[#C5A575] font-semibold mt-0.5 sm:mt-1 whitespace-nowrap inline-flex items-center gap-1">
+                  <span>Shop Saree</span>
+                  <ArrowRight className="w-2.5 h-2.5" />
+                </span>
               </div>
             </Link>
           ))}

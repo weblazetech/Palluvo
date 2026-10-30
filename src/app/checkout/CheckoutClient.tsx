@@ -1,0 +1,1349 @@
+"use client";
+
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { CheckCircle2, ShieldCheck, ArrowLeft, ArrowRight, ChevronRight, Lock, CreditCard, Building2, Info } from "lucide-react";
+import { useStore } from "@/context/StoreContext";
+import { OrderRecord, SavedAddress } from "@/data/mockOrders";
+import { getProductType, isSilkMarkCertified } from "@/data/products";
+import { scrollIntoView } from "@/utils/scroll";
+import { extract10DigitPhone, formatStoredPhone } from "@/utils/phone";
+
+const POPULAR_BANKS = [
+  { id: "hdfc", name: "HDFC Bank" },
+  { id: "sbi", name: "State Bank of India" },
+  { id: "icici", name: "ICICI Bank" },
+  { id: "axis", name: "Axis Bank" },
+  { id: "kotak", name: "Kotak Mahindra Bank" },
+];
+
+const OTHER_BANKS = [
+  { id: "pnb", name: "Punjab National Bank" },
+  { id: "bob", name: "Bank of Baroda" },
+  { id: "canara", name: "Canara Bank" },
+  { id: "union", name: "Union Bank of India" },
+  { id: "idbi", name: "IDBI Bank" },
+  { id: "indusind", name: "IndusInd Bank" },
+  { id: "yes", name: "Yes Bank" },
+  { id: "federal", name: "Federal Bank" },
+];
+
+export default function CheckoutPage() {
+  const {
+    cart,
+    subtotal,
+    discountAmount,
+    shippingFee,
+    finalTotal,
+    appliedCoupon,
+    formatPrice,
+    placeOrder,
+    clearOrders,
+    showToast,
+    addresses,
+    isLoggedIn,
+    user,
+    isHydrated,
+  } = useStore();
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [completedOrder, setCompletedOrder] = useState<OrderRecord | null>(null);
+
+  const step1Ref = useRef<HTMLDivElement>(null);
+  const step2Ref = useRef<HTMLDivElement>(null);
+  const step3Ref = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const targetRef = step === 1 ? step1Ref : step === 2 ? step2Ref : step3Ref;
+      if (targetRef.current) {
+        scrollIntoView(targetRef.current, { behavior: "smooth", block: "start" });
+      }
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [step]);
+
+  const validAddresses = useMemo(
+    () => (Array.isArray(addresses) ? addresses.filter((a): a is SavedAddress => Boolean(a && typeof a.id === "string")) : []),
+    [addresses]
+  );
+
+  const defaultAddr = isLoggedIn && validAddresses.length > 0 ? (validAddresses.find((a) => a.isDefault) || validAddresses[0]) : null;
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(defaultAddr ? defaultAddr.id : "");
+
+  // Address Form State — Dynamic based on auth state (empty for guest checkout)
+  const [shippingAddress, setShippingAddress] = useState({
+    fullName: defaultAddr ? defaultAddr.name : (isLoggedIn && user?.name ? user.name : ""),
+    phone: defaultAddr && typeof defaultAddr.phone === "string"
+      ? extract10DigitPhone(defaultAddr.phone)
+      : (isLoggedIn && user?.mobile ? extract10DigitPhone(user.mobile) : ""),
+    email: isLoggedIn && user?.email ? user.email : "",
+    addressLine1: defaultAddr ? defaultAddr.addressLine : "",
+    landmark: "",
+    city: defaultAddr ? defaultAddr.city : "",
+    state: defaultAddr ? defaultAddr.state : "",
+    pincode: defaultAddr ? defaultAddr.pincode : "",
+  });
+
+  // Keep form synchronized with StoreContext saved addresses when logged in
+  useEffect(() => {
+    if (isLoggedIn && validAddresses.length > 0) {
+      const active = validAddresses.find((a) => a.id === selectedAddressId) || validAddresses.find((a) => a.isDefault) || validAddresses[0];
+      if (active) {
+        if (selectedAddressId !== active.id) {
+          setSelectedAddressId(active.id);
+        }
+        setShippingAddress((prev) => ({
+          ...prev,
+          fullName: active.name || "",
+          phone: typeof active.phone === "string"
+            ? extract10DigitPhone(active.phone)
+            : (prev.phone || (user?.mobile ? extract10DigitPhone(user.mobile) : "")),
+          email: prev.email || user?.email || "",
+          addressLine1: active.addressLine || "",
+          city: active.city || "",
+          state: active.state || "",
+          pincode: active.pincode || "",
+        }));
+      }
+    }
+  }, [isLoggedIn, validAddresses, selectedAddressId, user?.email, user?.mobile]);
+
+  // Sync profile contact fields after auth hydration when no saved address is selected, without overwriting customer edits
+  useEffect(() => {
+    if (isLoggedIn && user && (!selectedAddressId || validAddresses.length === 0)) {
+      setShippingAddress((prev) => {
+        const needsName = !prev.fullName.trim() && Boolean(user.name);
+        const needsEmail = !prev.email.trim() && Boolean(user.email);
+        const formattedMobile = user.mobile ? extract10DigitPhone(user.mobile) : "";
+        const needsPhone = !prev.phone.trim() && Boolean(formattedMobile);
+
+        if (!needsName && !needsEmail && !needsPhone) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          fullName: needsName ? user.name : prev.fullName,
+          email: needsEmail ? user.email : prev.email,
+          phone: needsPhone ? formattedMobile : prev.phone,
+        };
+      });
+    }
+  }, [isLoggedIn, user, selectedAddressId, validAddresses.length, isHydrated]);
+
+  // Delivery & Payment selection
+  const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard");
+  const allSilkMarkItems = cart.length > 0 && cart.every((i) => isSilkMarkCertified(i.product));
+  const isJewelryOnly = cart.length > 0 && cart.every((i) => getProductType(i.product) === "jewelry");
+  const hasSarees = useMemo(() => cart.some((i) => getProductType(i.product) === "saree"), [cart]);
+  const hasBlouses = useMemo(() => cart.some((i) => getProductType(i.product) === "blouse"), [cart]);
+  const hasJewelry = useMemo(() => cart.some((i) => getProductType(i.product) === "jewelry"), [cart]);
+
+  const returnPromiseNotice = useMemo(() => {
+    if (cart.length === 0) {
+      return "7-Day Hassle-Free Returns on Eligible Items";
+    }
+    if (hasSarees && !hasBlouses && !hasJewelry) {
+      return "7-Day Hassle-Free Returns on Sarees (Unworn with tags & box intact)";
+    }
+    if (hasJewelry && !hasSarees && !hasBlouses) {
+      return "7-Day Returns on Jewelry (Unworn with intact security seal & pouch)";
+    }
+    if (hasBlouses && !hasSarees && !hasJewelry) {
+      return "7-Day Returns on Blouse Pieces (Uncut, unstitched in original wrap)";
+    }
+    const terms: string[] = [];
+    if (hasSarees) terms.push("Sarees (tags/box intact)");
+    if (hasBlouses) terms.push("Blouses (uncut)");
+    if (hasJewelry) terms.push("Jewelry (security seal intact)");
+    return `7-Day Returns on Eligible Items: ${terms.join(" • ")}`;
+  }, [cart.length, hasSarees, hasBlouses, hasJewelry]);
+  const isExpressEligible = appliedCoupon === "PALLUVO10" && subtotal >= 1999;
+  const expressFee = deliveryMethod === "express" ? (isExpressEligible ? 0 : 299) : 0;
+  const totalShippingFee = shippingFee + expressFee;
+  const effectiveTotal = finalTotal + expressFee;
+  const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking" | "cod">("upi");
+  const [upiId, setUpiId] = useState(isLoggedIn ? "radhika@okhdfcbank" : "");
+  const [upiError, setUpiError] = useState("");
+
+  // Card details state & validation
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: "",
+    cardholderName: "",
+    expiry: "",
+    cvv: "",
+  });
+  const [cardErrors, setCardErrors] = useState({
+    cardNumber: "",
+    cardholderName: "",
+    expiry: "",
+    cvv: "",
+  });
+
+  // Net Banking state
+  const [selectedBank, setSelectedBank] = useState("hdfc");
+
+  const handleAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = shippingAddress.phone.replace(/\D/g, "");
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      showToast("Please enter a valid 10-digit Indian mobile number (+91).", "info");
+      document.getElementById("phone")?.focus();
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleDeliverySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStep(3);
+  };
+
+  const handlePlaceOrder = () => {
+    const cleanPhone = shippingAddress.phone.replace(/\D/g, "");
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      showToast("Please enter a valid 10-digit Indian mobile number (+91).", "info");
+      setStep(1);
+      setTimeout(() => document.getElementById("phone")?.focus(), 50);
+      return;
+    }
+
+    if (paymentMethod === "upi" && !/^[a-zA-Z0-9._-]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$/.test(upiId.trim())) {
+      setUpiError("Please enter a valid UPI ID (e.g. mobile@upi).");
+      showToast("Please enter a valid UPI ID before placing your order.", "info");
+      const input = document.getElementById("upiId");
+      if (input) {
+        input.focus();
+      }
+      return;
+    }
+    setUpiError("");
+
+    if (paymentMethod === "card") {
+      const rawNum = cardDetails.cardNumber.replace(/\s/g, "");
+      const rawExp = cardDetails.expiry.replace(/\D/g, "");
+      const expMonth = parseInt(rawExp.slice(0, 2), 10);
+      const expYear = 2000 + parseInt(rawExp.slice(2, 4), 10);
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      const expiryValid =
+        rawExp.length === 4 &&
+        expMonth >= 1 &&
+        expMonth <= 12 &&
+        (expYear > currentYear || (expYear === currentYear && expMonth >= currentMonth));
+      const newErrors = {
+        cardNumber: rawNum.length < 15 ? "Please enter a valid 16-digit card number." : "",
+        cardholderName: !cardDetails.cardholderName.trim() ? "Please enter the cardholder name." : "",
+        expiry: !expiryValid ? "Please enter a valid, unexpired expiry date (MM/YY)." : "",
+        cvv: cardDetails.cvv.length < 3 ? "Please enter a valid CVV." : "",
+      };
+
+      if (newErrors.cardNumber || newErrors.cardholderName || newErrors.expiry || newErrors.cvv) {
+        setCardErrors(newErrors);
+        showToast("Please complete the required card details.", "info");
+        const firstErrField = newErrors.cardholderName
+          ? "cardholderName"
+          : newErrors.cardNumber
+          ? "cardNumber"
+          : newErrors.expiry
+          ? "cardExpiry"
+          : "cardCvv";
+        const input = document.getElementById(firstErrField);
+        if (input) input.focus();
+        return;
+      }
+      setCardErrors({ cardNumber: "", cardholderName: "", expiry: "", cvv: "" });
+    }
+
+    const allBanks = [...POPULAR_BANKS, ...OTHER_BANKS];
+    const bankName = allBanks.find((b) => b.id === selectedBank)?.name || "Bank";
+
+    const newOrder = placeOrder({
+      items: cart.map((i) => ({
+        id: i.product.id,
+        name: i.product.name,
+        image: i.product.images[0],
+        price: i.product.price,
+        quantity: i.quantity,
+        color: i.selectedColor || "Standard",
+        blouseOption: i.blouseOption,
+      })),
+      totalAmount: effectiveTotal,
+      shippingAddress: `${shippingAddress.fullName}, ${shippingAddress.addressLine1}${shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, ${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode} (Ph: ${formatStoredPhone(shippingAddress.phone)})`,
+      paymentMethod:
+        paymentMethod === "upi"
+          ? "UPI (Google Pay / PhonePe)"
+          : paymentMethod === "card"
+          ? `Credit / Debit Card (ending in ${cardDetails.cardNumber.replace(/\s/g, "").slice(-4) || "XXXX"})`
+          : paymentMethod === "netbanking"
+          ? `Net Banking (${bankName})`
+          : "Cash on Delivery",
+      trackingNumber: `EXP${Math.floor(10000000 + Math.random() * 90000000)}`,
+    });
+
+    // Immediately discard any entered card form state so sensitive test values are not retained
+    setCardDetails({ cardNumber: "", cardholderName: "", expiry: "", cvv: "" });
+    setCardErrors({ cardNumber: "", cardholderName: "", expiry: "", cvv: "" });
+
+    setCompletedOrder(newOrder);
+  };
+
+  // If order is completed, show confirmation screen
+  if (completedOrder) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] py-12 sm:py-16">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6">
+          <div className="bg-white p-8 sm:p-10 rounded-sm border border-[#E8E2D9] text-center shadow-lg space-y-6">
+            <div className="w-16 h-16 mx-auto rounded-full bg-green-50 flex items-center justify-center text-[#15803D]">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F4EFE6] border border-[#C5A575]/50 rounded-full text-xs uppercase tracking-widest text-[#541920] font-semibold mb-2">
+                <Info className="w-3.5 h-3.5 text-[#541920]" />
+                Simulated Prototype Order Placed
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-serif font-normal text-neutral-900 mt-1">
+                Thank You For Testing PALLUVO!
+              </h1>
+              <p className="text-xs sm:text-sm text-neutral-600 mt-1 font-sans">
+                Simulated Order ID: <strong className="text-neutral-900 font-mono">{completedOrder.orderNumber}</strong>
+              </p>
+            </div>
+
+            <div className="bg-[#FAF7F2] p-4 rounded-xs border border-[#E8E2D9] text-left text-xs space-y-2.5">
+              <div className="p-3 bg-white border border-[#C5A575]/40 rounded-xs flex items-start gap-2.5 text-neutral-700">
+                <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-[11px] leading-relaxed">
+                    <strong>Simulated Transaction & Local Storage Notice:</strong> No actual payment was charged. This simulated order and entered shipping address have been saved to your local browser storage (<code className="font-mono bg-[#FAF7F2] px-1 py-0.5 rounded border border-[#E8E2D9]">localStorage</code>) for prototype review on this device.
+                  </p>
+                  <p className="text-[11px] text-neutral-500">
+                    If using a shared or public browser profile, you can clear stored prototype order data below.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[#E8E2D9] flex justify-between text-neutral-800">
+                <span>Estimated Handloom Dispatch:</span>
+                <strong className="text-[#541920]">{completedOrder.deliveryDate}</strong>
+              </div>
+              <div className="flex justify-between text-neutral-800">
+                <span>Selected Method:</span>
+                <strong>{completedOrder.paymentMethod} (Simulated)</strong>
+              </div>
+              <div className="flex justify-between text-neutral-800">
+                <span>Order Total:</span>
+                <strong className="text-[#541920] tabular-nums">{formatPrice(completedOrder.totalAmount)} (Not Charged)</strong>
+              </div>
+              <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
+                <p className="font-semibold text-neutral-800 mb-0.5">Need help with your order?</p>
+                <p>
+                  Email: <a href="mailto:info@palluvo.store" className="text-[#541920] font-medium hover:underline">info@palluvo.store</a>
+                </p>
+                <p>
+                  Phone: <a href="tel:+918897776984" className="text-[#541920] font-medium hover:underline">+91 88977 76984</a> / <a href="tel:+918498854323" className="text-[#541920] font-medium hover:underline">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] font-medium hover:underline">+91 81067 89789</a> · <a href="https://wa.me/918897776984" target="_blank" rel="noopener noreferrer" className="text-[#075E54] hover:underline font-medium">WhatsApp</a>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Link
+                href="/account"
+                className="flex-1 min-h-[44px] inline-flex items-center justify-center py-3 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs hover:bg-[#3D1217] transition-colors text-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              >
+                Track In My Orders
+              </Link>
+              <Link
+                href="/shop"
+                className="flex-1 min-h-[44px] inline-flex items-center justify-center py-3 bg-white border border-[#DCD5C9] text-neutral-900 text-xs uppercase tracking-widest font-semibold rounded-xs hover:bg-[#FAF7F2] transition-colors text-center focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              >
+                Continue Shopping
+              </Link>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  clearOrders();
+                  showToast("Simulated order history cleared from browser storage");
+                }}
+                className="min-h-[44px] px-4 py-2 border border-[#DCD5C9] text-neutral-700 hover:text-[#541920] hover:bg-[#FAF7F2] text-[11px] uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+              >
+                Clear Stored Prototype Orders
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If cart is empty and no order completed
+  if (cart.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] py-16 text-center">
+        <h1 className="text-2xl font-serif">Your bag is empty</h1>
+        <p className="text-xs text-neutral-600 mt-2">Add products to your bag before proceeding to checkout.</p>
+        <Link
+          href="/shop"
+          className="inline-block mt-4 px-6 py-2.5 bg-[#541920] text-white text-xs uppercase tracking-widest font-semibold rounded-xs"
+        >
+          Explore Products
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FAF7F2] pb-16">
+      {/* Top Checkout Header */}
+      <div className="bg-[#F4EFE6] border-b border-[#E8E2D9] py-3 sm:py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+            <div className="flex items-center justify-between sm:justify-start gap-4">
+              <Link
+                href="/cart"
+                className="min-h-[44px] inline-flex items-center gap-1.5 text-xs text-neutral-600 hover:text-black whitespace-nowrap font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+              >
+                <ArrowLeft className="w-4 h-4 shrink-0" />
+                <span>Back to Bag</span>
+              </Link>
+
+              <div className="sm:hidden flex items-center gap-1 text-[11px] text-[#15803D] font-medium shrink-0">
+                <Lock className="w-3.5 h-3.5 shrink-0" />
+                <span>Demo Checkout</span>
+              </div>
+            </div>
+
+            {/* Stepper */}
+            <nav aria-label="Checkout Progress" className="overflow-x-auto py-1 sm:py-0">
+              <ol className="flex items-center justify-center gap-2 sm:gap-4 text-xs font-sans list-none m-0 p-0">
+                <li className="flex items-center gap-2 sm:gap-4">
+                  <span
+                    aria-current={step === 1 ? "step" : undefined}
+                    className={`whitespace-nowrap font-semibold ${step >= 1 ? "text-[#541920]" : "text-neutral-600"}`}
+                  >
+                    1. Address
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" aria-hidden="true" />
+                </li>
+                <li className="flex items-center gap-2 sm:gap-4">
+                  <span
+                    aria-current={step === 2 ? "step" : undefined}
+                    className={`whitespace-nowrap font-semibold ${step >= 2 ? "text-[#541920]" : "text-neutral-600"}`}
+                  >
+                    2. Delivery
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" aria-hidden="true" />
+                </li>
+                <li>
+                  <span
+                    aria-current={step === 3 ? "step" : undefined}
+                    className={`whitespace-nowrap font-semibold ${step >= 3 ? "text-[#541920]" : "text-neutral-600"}`}
+                  >
+                    3. Payment
+                  </span>
+                </li>
+              </ol>
+            </nav>
+
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#15803D] font-medium shrink-0">
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>Demo Checkout</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          
+          {/* Left Column: Multi-Step Forms */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Step 1: Address */}
+            <div ref={step1Ref} className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden scroll-mt-4 sm:scroll-mt-6">
+              <div className="p-4 sm:p-5 border-b border-[#E8E2D9] bg-[#F4EFE6] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-[#541920] text-white text-xs flex items-center justify-center font-bold">
+                    1
+                  </span>
+                  <h2 className="font-serif text-base font-medium text-neutral-900">
+                    Shipping Address
+                  </h2>
+                </div>
+                {step > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="min-h-[44px] px-2 -mr-2 text-xs text-[#541920] font-semibold hover:underline inline-flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+                    aria-label="Edit shipping address"
+                  >
+                    Edit Address
+                  </button>
+                )}
+              </div>
+
+              {step === 1 ? (
+                <form onSubmit={handleAddressSubmit} className="p-6 space-y-4 text-xs">
+                  {/* Privacy / Prototype Local Storage Notice */}
+                  <div className="p-3.5 bg-[#FAF7F2] border border-[#E8E2D9] rounded-xs text-xs text-neutral-800 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-semibold text-[#541920]">
+                      <Info className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>Demo Privacy & Storage Notice</span>
+                    </div>
+                    <p className="text-neutral-600 text-[11px] leading-relaxed">
+                      Please do not enter real personal, confidential, or sensitive shipping details. In this prototype, entered names, addresses, and phone numbers are stored strictly in your browser&apos;s local storage (<code className="font-mono bg-white px-1 py-0.5 rounded border border-[#E8E2D9]">localStorage</code>) to demonstrate simulated order workflows on this device.
+                    </p>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShippingAddress({
+                            fullName: "Ananya Rao",
+                            phone: "9876543210",
+                            email: "ananya.sample@example.com",
+                            addressLine1: "Flat 402, Lotus Grand, Banjara Hills",
+                            landmark: "Near City Center",
+                            city: "Hyderabad",
+                            state: "Telangana",
+                            pincode: "500034",
+                          });
+                          setSelectedAddressId("");
+                          showToast("Filled sample shipping details!");
+                        }}
+                        className="min-h-[36px] px-3 py-1 bg-[#541920]/10 hover:bg-[#541920]/15 text-[#541920] font-semibold text-[11px] rounded-xs transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                      >
+                        Fill Sample Details
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Saved addresses selector */}
+                  {validAddresses && validAddresses.length > 0 && (
+                    <div className="space-y-2 pb-3 border-b border-[#E8E2D9]">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-neutral-800 text-xs">
+                          Deliver to Saved Address:
+                        </span>
+                        <Link
+                          href="/account"
+                          className="text-[11px] text-[#541920] font-semibold hover:underline inline-flex items-center gap-1"
+                        >
+                          <span>Manage Addresses</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {validAddresses.map((addr) => {
+                          const isSelected = selectedAddressId === addr.id;
+                          return (
+                            <button
+                              key={addr.id}
+                              type="button"
+                              aria-pressed={Boolean(isSelected)}
+                              onClick={() => {
+                                setSelectedAddressId(addr.id);
+                                setShippingAddress((prev) => ({
+                                  ...prev,
+                                  fullName: addr.name || "",
+                                  phone: typeof addr.phone === "string" ? extract10DigitPhone(addr.phone) : "",
+                                  addressLine1: addr.addressLine || "",
+                                  city: addr.city || "",
+                                  state: addr.state || "",
+                                  pincode: addr.pincode || "",
+                                }));
+                              }}
+                              className={`p-3 text-left rounded-xs border transition-colors cursor-pointer text-xs focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                                isSelected
+                                  ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]"
+                                  : "border-[#DCD5C9] bg-white hover:border-neutral-400"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-neutral-900 flex items-center gap-1.5">
+                                  {addr.name || "Address"}
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-neutral-100 rounded text-neutral-600 font-normal">
+                                    {addr.type || "Home"}
+                                  </span>
+                                </span>
+                                {addr.isDefault && (
+                                  <span className="text-[10px] text-[#541920] font-semibold">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-neutral-600 line-clamp-1">{addr.addressLine || ""}</p>
+                              <p className="text-neutral-500 text-[11px] mt-0.5">
+                                {addr.city || ""}, {addr.state || ""} - {addr.pincode || ""}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="fullName" className="block text-neutral-700 font-medium mb-1">
+                        Full Name *
+                      </label>
+                      <input
+                        id="fullName"
+                        name="fullName"
+                        type="text"
+                        autoComplete="name"
+                        required
+                        value={shippingAddress.fullName}
+                        onChange={(e) => setShippingAddress({ ...shippingAddress, fullName: e.target.value })}
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="phone" className="block text-neutral-700 font-medium mb-1">
+                        Phone Number (+91) *
+                      </label>
+                      <input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[6-9][0-9]{9}"
+                        minLength={10}
+                        maxLength={10}
+                        autoComplete="tel"
+                        required
+                        title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
+                        value={shippingAddress.phone}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setShippingAddress({ ...shippingAddress, phone: digitsOnly });
+                        }}
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="email" className="block text-neutral-700 font-medium mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={shippingAddress.email}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, email: e.target.value })}
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="addressLine1" className="block text-neutral-700 font-medium mb-1">
+                      Flat / House / Street Address *
+                    </label>
+                    <input
+                      id="addressLine1"
+                      name="addressLine1"
+                      type="text"
+                      autoComplete="street-address"
+                      required
+                      value={shippingAddress.addressLine1}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="landmark" className="block text-neutral-700 font-medium mb-1">
+                      Landmark (Optional)
+                    </label>
+                    <input
+                      id="landmark"
+                      name="landmark"
+                      type="text"
+                      placeholder="e.g. Near Lotus Temple Road"
+                      value={shippingAddress.landmark}
+                      onChange={(e) => setShippingAddress({ ...shippingAddress, landmark: e.target.value })}
+                      className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label htmlFor="city" className="block text-neutral-700 font-medium mb-1">
+                        City *
+                      </label>
+                      <input
+                        id="city"
+                        name="city"
+                        type="text"
+                        autoComplete="address-level2"
+                        required
+                        value={shippingAddress.city}
+                        onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="state" className="block text-neutral-700 font-medium mb-1">
+                        State *
+                      </label>
+                      <input
+                        id="state"
+                        name="state"
+                        type="text"
+                        autoComplete="address-level1"
+                        required
+                        value={shippingAddress.state}
+                        onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="pincode" className="block text-neutral-700 font-medium mb-1">
+                        PIN Code *
+                      </label>
+                      <input
+                        id="pincode"
+                        name="pincode"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="postal-code"
+                        required
+                        maxLength={6}
+                        value={shippingAddress.pincode}
+                        onChange={(e) => {
+                          const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 6);
+                          setShippingAddress({ ...shippingAddress, pincode: digitsOnly });
+                        }}
+                        className="w-full min-h-[44px] px-3 py-2.5 border border-[#DCD5C9] rounded-xs focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none inline-flex items-center justify-center gap-2"
+                    >
+                      <span>Deliver to This Address</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="p-4 text-xs text-neutral-600">
+                  <p className="font-semibold text-neutral-900">{shippingAddress.fullName} ({formatStoredPhone(shippingAddress.phone)})</p>
+                  <p>{shippingAddress.addressLine1}{shippingAddress.landmark ? `, ${shippingAddress.landmark}` : ""}, {shippingAddress.city}, {shippingAddress.state} - {shippingAddress.pincode}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Step 2: Delivery Method */}
+            <div ref={step2Ref} className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden scroll-mt-4 sm:scroll-mt-6">
+              <div className="p-4 sm:p-5 border-b border-[#E8E2D9] bg-[#F4EFE6] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold ${
+                    step >= 2 ? "bg-[#541920]" : "bg-neutral-300"
+                  }`}>
+                    2
+                  </span>
+                  <h2 className="font-serif text-base font-medium text-neutral-900">
+                    Delivery Speed
+                  </h2>
+                </div>
+                {step > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="min-h-[44px] px-2 -mr-2 text-xs text-[#541920] font-semibold hover:underline inline-flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-xs"
+                    aria-label="Change delivery method"
+                  >
+                    Change Delivery
+                  </button>
+                )}
+              </div>
+
+              {step === 2 && (
+                <form onSubmit={handleDeliverySubmit} className="p-6 space-y-3 text-xs">
+                  <label
+                    htmlFor="delivery-standard"
+                    className={`flex items-center justify-between p-3.5 min-h-[44px] border rounded-xs cursor-pointer ${
+                      deliveryMethod === "standard"
+                        ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]"
+                        : "border-[#E8E2D9]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="delivery-standard"
+                        name="deliveryMethod"
+                        type="radio"
+                        value="standard"
+                        checked={deliveryMethod === "standard"}
+                        onChange={() => setDeliveryMethod("standard")}
+                        className="text-[#541920]"
+                      />
+                      <div>
+                        <p className="font-semibold text-neutral-900">Standard Insured Delivery (3-5 Business Days • Illustrative ETA)</p>
+                        <p className="text-[11px] text-neutral-600">
+                          {allSilkMarkItems
+                            ? "Tamper-proof rigid box with Silk Mark Certificate (Illustrative prototype service)"
+                            : "Tamper-proof rigid keepsake box with Certificate of Authenticity (Illustrative prototype service)"}
+                        </p>
+                      </div>
+                    </div>
+                    {shippingFee === 0 ? (
+                      <span className="font-bold text-[#15803D]">FREE</span>
+                    ) : (
+                      <span className="font-bold text-neutral-900 tabular-nums">{formatPrice(shippingFee)}</span>
+                    )}
+                  </label>
+
+                  <label
+                    htmlFor="delivery-express"
+                    className={`flex items-center justify-between p-3.5 min-h-[44px] border rounded-xs cursor-pointer ${
+                      deliveryMethod === "express"
+                        ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]"
+                        : "border-[#E8E2D9]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="delivery-express"
+                        name="deliveryMethod"
+                        type="radio"
+                        value="express"
+                        checked={deliveryMethod === "express"}
+                        onChange={() => setDeliveryMethod("express")}
+                        className="text-[#541920]"
+                      />
+                      <div>
+                        <p className="font-semibold text-neutral-900">Priority Air Express (1-2 Business Days • Illustrative ETA)</p>
+                        <p className="text-[11px] text-neutral-600">
+                          {isExpressEligible
+                            ? "Complimentary priority courier included with coupon PALLUVO10 (Illustrative service; no live tracking or SMS sent for prototype orders)"
+                            : "Priority air courier service (Illustrative details; no live tracking or SMS sent for prototype orders)"}
+                        </p>
+                      </div>
+                    </div>
+                    {isExpressEligible ? (
+                      <span className="font-bold text-[#15803D] tabular-nums">
+                        <span className="line-through text-neutral-600 font-normal text-xs mr-1.5">₹299</span>
+                        FREE
+                      </span>
+                    ) : (
+                      <span className="font-bold text-neutral-900 tabular-nums">₹299</span>
+                    )}
+                  </label>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full min-h-[44px] py-3 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none inline-flex items-center justify-center gap-2"
+                    >
+                      <span>Proceed to Payment</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* Step 3: Payment Method */}
+            <div ref={step3Ref} className="bg-white rounded-sm border border-[#E8E2D9] overflow-hidden scroll-mt-4 sm:scroll-mt-6">
+              <div className="p-4 sm:p-5 border-b border-[#E8E2D9] bg-[#F4EFE6] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold ${
+                    step === 3 ? "bg-[#541920]" : "bg-neutral-300"
+                  }`}>
+                    3
+                  </span>
+                  <h2 className="font-serif text-base font-medium text-neutral-900">
+                    Payment Method
+                  </h2>
+                </div>
+              </div>
+
+              {step === 3 && (
+                <div className="p-6 space-y-4 text-xs">
+                  {/* Prototype Payment Simulation Banner */}
+                  <div className="p-3.5 bg-[#F4EFE6] border border-[#C5A575]/50 rounded-xs flex items-start gap-2.5 text-neutral-800">
+                    <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                    <p className="text-[11px] leading-relaxed font-sans">
+                      <strong>Prototype Demonstration:</strong> Payment authorization is simulated locally for workflow evaluation. Live payment gateways are not connected, and no actual financial charges occur.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {/* UPI */}
+                    <div
+                      className={`flex flex-col p-3.5 min-h-[44px] border rounded-xs transition-colors ${
+                        paymentMethod === "upi" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
+                      }`}
+                    >
+                      <label htmlFor="payment-upi" className="flex items-center justify-between cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="payment-upi"
+                            name="paymentMethod"
+                            value="upi"
+                            type="radio"
+                            checked={paymentMethod === "upi"}
+                            onChange={() => setPaymentMethod("upi")}
+                            className="text-[#541920]"
+                          />
+                          <span className="font-semibold text-neutral-900">Simulated UPI (GPay, PhonePe, Paytm, QR)</span>
+                        </div>
+                        <span className="text-[10px] text-[#15803D] font-bold">Fastest</span>
+                      </label>
+                      {paymentMethod === "upi" && (
+                        <div className="mt-3 pt-3 border-t border-[#E8E2D9] space-y-2">
+                          <label htmlFor="upiId" className="block text-neutral-700 font-medium mb-1">
+                            UPI ID *
+                          </label>
+                          <input
+                            id="upiId"
+                            name="upiId"
+                            type="text"
+                            placeholder="Enter UPI ID (e.g. mobile@upi)"
+                            value={upiId}
+                            onChange={(e) => {
+                              setUpiId(e.target.value);
+                              if (upiError && e.target.value.trim()) {
+                                setUpiError("");
+                              }
+                            }}
+                            className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                              upiError
+                                ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                            }`}
+                            aria-invalid={!!upiError}
+                            aria-describedby={upiError ? "upi-error-msg" : undefined}
+                          />
+                          {upiError && (
+                            <p id="upi-error-msg" className="text-xs text-red-600 font-medium mt-1">
+                              {upiError}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card */}
+                    <div
+                      className={`flex flex-col p-3.5 min-h-[44px] border rounded-xs transition-colors ${
+                        paymentMethod === "card" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
+                      }`}
+                    >
+                      <label htmlFor="payment-card" className="flex items-center justify-between cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="payment-card"
+                            name="paymentMethod"
+                            value="card"
+                            type="radio"
+                            checked={paymentMethod === "card"}
+                            onChange={() => setPaymentMethod("card")}
+                            className="text-[#541920]"
+                          />
+                          <span className="font-semibold text-neutral-900">Simulated Card Payment (Test Credentials)</span>
+                        </div>
+                        <CreditCard className="w-4 h-4 text-neutral-500" />
+                      </label>
+                      {paymentMethod === "card" && (
+                        <div className="mt-3 pt-3 border-t border-[#E8E2D9] space-y-3">
+                          <div className="p-2.5 bg-[#FAF7F2] border border-[#C5A575]/40 rounded-xs text-[11px] text-neutral-700">
+                            <strong>Test Card Simulation:</strong> You may test this flow using any 16-digit sample number (e.g. 4123 4567 8901 2345). Do not enter real credit card numbers or security CVVs.
+                          </div>
+                          <div>
+                            <label htmlFor="cardholderName" className="block text-neutral-700 font-medium mb-1">
+                              Cardholder Name *
+                            </label>
+                            <input
+                              id="cardholderName"
+                              name="demoCardholderName"
+                              type="text"
+                              autoComplete="off"
+                              placeholder="e.g. Radhika Sharma"
+                              value={cardDetails.cardholderName}
+                              onChange={(e) => {
+                                setCardDetails({ ...cardDetails, cardholderName: e.target.value });
+                                if (cardErrors.cardholderName && e.target.value.trim()) {
+                                  setCardErrors((prev) => ({ ...prev, cardholderName: "" }));
+                                }
+                              }}
+                              className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                                cardErrors.cardholderName
+                                  ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                  : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                              }`}
+                              aria-invalid={!!cardErrors.cardholderName}
+                              aria-describedby={cardErrors.cardholderName ? "cardholder-error" : undefined}
+                            />
+                            {cardErrors.cardholderName && (
+                              <p id="cardholder-error" className="text-xs text-red-600 font-medium mt-1">
+                                {cardErrors.cardholderName}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <label htmlFor="cardNumber" className="block text-neutral-700 font-medium mb-1">
+                              Card Number *
+                            </label>
+                            <input
+                              id="cardNumber"
+                              name="demoCardNumber"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9 ]*"
+                              autoComplete="off"
+                              maxLength={19}
+                              placeholder="4123 4567 8901 2345"
+                              value={cardDetails.cardNumber}
+                              onChange={(e) => {
+                                const digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+                                const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+                                setCardDetails({ ...cardDetails, cardNumber: formatted });
+                                if (cardErrors.cardNumber && digits.length >= 15) {
+                                  setCardErrors((prev) => ({ ...prev, cardNumber: "" }));
+                                }
+                              }}
+                              className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                                cardErrors.cardNumber
+                                  ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                  : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                              }`}
+                              aria-invalid={!!cardErrors.cardNumber}
+                              aria-describedby={cardErrors.cardNumber ? "cardnumber-error" : undefined}
+                            />
+                            {cardErrors.cardNumber && (
+                              <p id="cardnumber-error" className="text-xs text-red-600 font-medium mt-1">
+                                {cardErrors.cardNumber}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label htmlFor="cardExpiry" className="block text-neutral-700 font-medium mb-1">
+                                Expiry (MM/YY) *
+                              </label>
+                              <input
+                                id="cardExpiry"
+                                name="demoCardExpiry"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9/]*"
+                                autoComplete="off"
+                                maxLength={5}
+                                placeholder="MM/YY"
+                                value={cardDetails.expiry}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                  const formatted = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+                                  setCardDetails({ ...cardDetails, expiry: formatted });
+                                  if (cardErrors.expiry && digits.length === 4) {
+                                    setCardErrors((prev) => ({ ...prev, expiry: "" }));
+                                  }
+                                }}
+                                className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                                  cardErrors.expiry
+                                    ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                    : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                                }`}
+                                aria-invalid={!!cardErrors.expiry}
+                                aria-describedby={cardErrors.expiry ? "expiry-error" : undefined}
+                              />
+                              {cardErrors.expiry && (
+                                <p id="expiry-error" className="text-xs text-red-600 font-medium mt-1">
+                                  {cardErrors.expiry}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <label htmlFor="cardCvv" className="block text-neutral-700 font-medium mb-1">
+                                CVV *
+                              </label>
+                              <input
+                                id="cardCvv"
+                                name="demoCardCvv"
+                                type="password"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                autoComplete="off"
+                                maxLength={4}
+                                placeholder="•••"
+                                value={cardDetails.cvv}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                  setCardDetails({ ...cardDetails, cvv: digits });
+                                  if (cardErrors.cvv && digits.length >= 3) {
+                                    setCardErrors((prev) => ({ ...prev, cvv: "" }));
+                                  }
+                                }}
+                                className={`w-full min-h-[44px] px-3 py-2.5 bg-white border rounded-xs focus:outline-none transition-colors ${
+                                  cardErrors.cvv
+                                    ? "border-red-600 focus:border-red-600 ring-1 ring-red-600 focus-visible:ring-2 focus-visible:ring-red-600"
+                                    : "border-[#DCD5C9] focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                                }`}
+                                aria-invalid={!!cardErrors.cvv}
+                                aria-describedby={cardErrors.cvv ? "cvv-error" : undefined}
+                              />
+                              {cardErrors.cvv && (
+                                <p id="cvv-error" className="text-xs text-red-600 font-medium mt-1">
+                                  {cardErrors.cvv}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1 text-[11px] text-neutral-600">
+                            <Info className="w-4 h-4 text-[#541920] shrink-0" />
+                            <span>Demonstration form only: card details are checked client-side and never transmitted to payment networks.</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Netbanking */}
+                    <div
+                      className={`flex flex-col p-3.5 min-h-[44px] border rounded-xs transition-colors ${
+                        paymentMethod === "netbanking" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
+                      }`}
+                    >
+                      <label htmlFor="payment-netbanking" className="flex items-center justify-between cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="payment-netbanking"
+                            name="paymentMethod"
+                            value="netbanking"
+                            type="radio"
+                            checked={paymentMethod === "netbanking"}
+                            onChange={() => setPaymentMethod("netbanking")}
+                            className="text-[#541920]"
+                          />
+                          <span className="font-semibold text-neutral-900">Simulated Net Banking (Prototype Flow)</span>
+                        </div>
+                        <Building2 className="w-4 h-4 text-neutral-500" />
+                      </label>
+                      {paymentMethod === "netbanking" && (
+                        <div className="mt-3 pt-3 border-t border-[#E8E2D9] space-y-3">
+                          <div>
+                            <span className="block text-neutral-700 font-medium mb-1.5">
+                              Popular Banks:
+                            </span>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {POPULAR_BANKS.map((b) => {
+                                const isSelected = selectedBank === b.id;
+                                return (
+                                  <button
+                                    key={b.id}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    onClick={() => setSelectedBank(b.id)}
+                                    className={`min-h-[44px] px-3 py-2 text-xs rounded-xs border text-center transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
+                                      isSelected
+                                        ? "bg-[#541920] text-white border-[#541920] font-semibold"
+                                        : "bg-white text-neutral-800 border-[#DCD5C9] hover:border-[#541920]"
+                                    }`}
+                                  >
+                                    {b.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label htmlFor="other-bank-select" className="block text-neutral-700 font-medium mb-1">
+                              Or Choose Other Bank:
+                            </label>
+                            <select
+                              id="other-bank-select"
+                              name="otherBank"
+                              value={selectedBank}
+                              onChange={(e) => setSelectedBank(e.target.value)}
+                              className="w-full min-h-[44px] px-3 py-2.5 bg-white border border-[#DCD5C9] rounded-xs text-xs text-neutral-800 focus:outline-none focus:border-[#541920] focus-visible:ring-2 focus-visible:ring-[#541920]"
+                            >
+                              <optgroup label="Popular Banks">
+                                {POPULAR_BANKS.map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {b.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                              <optgroup label="Other Banks">
+                                {OTHER_BANKS.map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {b.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            </select>
+                          </div>
+
+                          <div className="p-3 bg-white border border-[#E8E2D9] rounded-xs flex items-start gap-2.5 text-neutral-700">
+                            <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                            <p className="text-[11px] leading-relaxed">
+                              <strong>Simulated Flow:</strong> Placing an order simulates the net banking confirmation locally in this prototype without external gateway redirects or banking credentials.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cash on Delivery */}
+                    <label
+                      htmlFor="payment-cod"
+                      className={`flex flex-col p-3.5 min-h-[44px] justify-center border rounded-xs cursor-pointer ${
+                        paymentMethod === "cod" ? "border-[#541920] bg-[#FAF7F2] ring-1 ring-[#541920]" : "border-[#E8E2D9]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="payment-cod"
+                            name="paymentMethod"
+                            value="cod"
+                            type="radio"
+                            checked={paymentMethod === "cod"}
+                            onChange={() => setPaymentMethod("cod")}
+                            className="text-[#541920]"
+                          />
+                          <span className="font-semibold text-neutral-900">Cash on Delivery (Simulated)</span>
+                        </div>
+                        <span className="text-[10px] text-neutral-600">Simulated test order</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      onClick={handlePlaceOrder}
+                      className="w-full min-h-[44px] py-3.5 bg-[#541920] hover:bg-[#3D1217] text-white uppercase tracking-widest font-semibold rounded-xs shadow-md transition-all flex items-center justify-center gap-2 text-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none tabular-nums"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-green-300" />
+                      <span>Place Simulated Order ({formatPrice(effectiveTotal)})</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Right Column: Order Summary In Checkout */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white p-6 rounded-sm border border-[#E8E2D9] space-y-4">
+              <h3 className="font-serif text-base font-semibold text-neutral-900 border-b border-[#E8E2D9] pb-3 tabular-nums">
+                Items in Order ({cart.reduce((s, i) => s + i.quantity, 0)})
+              </h3>
+
+              <div className="space-y-3 max-h-72 overflow-y-auto divide-y divide-[#EFEAE1]">
+                {cart.map((item) => (
+                  <div key={`${item.product.id}-${item.selectedColor || 'def'}-${item.blouseOption || 'none'}`} className="pt-3 first:pt-0 flex gap-3">
+                    <div className="relative w-14 h-18 shrink-0 rounded-xs overflow-hidden bg-neutral-100">
+                      <Image
+                        src={item.product.images[0]}
+                        alt={item.product.name}
+                        fill
+                        sizes="60px"
+                        className="object-cover object-top"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-serif font-medium text-neutral-900 line-clamp-2 leading-snug break-words">
+                        {item.product.name}
+                      </p>
+                      <p className="text-[11px] text-neutral-500 tabular-nums">
+                        Qty: {item.quantity} {item.selectedColor && `• ${item.selectedColor}`} {item.blouseOption && `• ${item.blouseOption}`}
+                      </p>
+                      <p className="text-xs font-bold text-[#541920] mt-1 tabular-nums">
+                        {formatPrice(item.product.price * item.quantity)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Price breakdown */}
+              <div className="space-y-1.5 text-xs text-neutral-600 pt-3 border-t border-[#E8E2D9] tabular-nums">
+                <div className="flex justify-between">
+                  <span>Bag Subtotal</span>
+                  <span className="font-medium text-neutral-900 tabular-nums">{formatPrice(subtotal)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-[#15803D]">
+                    <span>Discount</span>
+                    <span className="tabular-nums">-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Shipping Fee</span>
+                  <span className="font-medium text-neutral-900 tabular-nums">
+                    {totalShippingFee === 0 ? (
+                      <span className="font-bold text-[#15803D]">FREE</span>
+                    ) : (
+                      formatPrice(totalShippingFee)
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-base font-serif font-bold text-neutral-900 pt-2 border-t border-[#E8E2D9]">
+                  <span>Total Amount</span>
+                  <span className="text-[#541920] tabular-nums">{formatPrice(effectiveTotal)}</span>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-neutral-500 pt-2 border-t border-[#E8E2D9] space-y-1">
+                <p>• {returnPromiseNotice}</p>
+                <p>
+                  •{" "}
+                  {allSilkMarkItems
+                    ? "100% Pure Silk Mark Verified"
+                    : isJewelryOnly
+                    ? "100% Certified Handcrafted Authenticity"
+                    : "100% Verified Artisanal Authenticity"}
+                </p>
+                <div className="pt-2 border-t border-[#E8E2D9] text-neutral-600">
+                  <Link
+                    href="/checkout/help"
+                    className="inline-flex items-center gap-1 font-semibold text-neutral-800 hover:text-[#541920] hover:underline mb-1 transition-colors focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none rounded-2xs"
+                    aria-label="Need Help with Checkout? View checkout FAQs and guide"
+                  >
+                    <span>Need Help with Checkout?</span>
+                    <ArrowRight className="w-3 h-3 text-[#541920]" aria-hidden="true" />
+                  </Link>
+                  <p>
+                    Email: <a href="mailto:info@palluvo.store" className="text-[#541920] hover:underline font-medium">info@palluvo.store</a>
+                  </p>
+                  <p>
+                    Phone: <a href="tel:+918897776984" className="text-[#541920] hover:underline font-medium">+91 88977 76984</a> / <a href="tel:+918498854323" className="text-[#541920] hover:underline font-medium">+91 84988 54323</a> / <a href="tel:+918106789789" className="text-[#541920] hover:underline font-medium">+91 81067 89789</a> · <a href="https://wa.me/918897776984" target="_blank" rel="noopener noreferrer" className="text-[#075E54] hover:underline font-medium">WhatsApp</a>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}

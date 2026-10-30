@@ -5,6 +5,7 @@ export interface OrderProductItem {
   price: number;
   quantity: number;
   color: string;
+  blouseOption?: string;
 }
 
 export interface OrderRecord {
@@ -49,6 +50,7 @@ export const MOCK_ORDERS: OrderRecord[] = [
         price: 2999,
         quantity: 1,
         color: "Wine",
+        blouseOption: "With Blouse",
       },
     ],
     shippingAddress: "Flat 402, Lotus Towers, Indiranagar, Bangalore, Karnataka - 560038",
@@ -70,6 +72,7 @@ export const MOCK_ORDERS: OrderRecord[] = [
         price: 2499,
         quantity: 2,
         color: "Gold",
+        blouseOption: "With Blouse",
       },
     ],
     shippingAddress: "Flat 402, Lotus Towers, Indiranagar, Bangalore, Karnataka - 560038",

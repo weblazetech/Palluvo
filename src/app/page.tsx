@@ -1,44 +1,50 @@
 import React from "react";
+import type { Metadata } from "next";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
-import { NewArrivalsSection } from "@/components/home/NewArrivalsSection";
+import { FeaturedCollectionSection } from "@/components/home/FeaturedCollectionSection";
 import { ShopTheLook } from "@/components/home/ShopTheLook";
-import { TrendingCarousel } from "@/components/home/TrendingCarousel";
 import { CollectionBanner } from "@/components/home/CollectionBanner";
-import { BestsellersSection } from "@/components/home/BestsellersSection";
 import { TrustSection } from "@/components/home/TrustSection";
-import { ReviewsSection } from "@/components/home/ReviewsSection";
 import { InstagramGrid } from "@/components/home/InstagramGrid";
+import { OfferWelcomeModal } from "@/components/home/OfferWelcomeModal";
+import { BackToTopButton } from "@/components/common/BackToTopButton";
+
+export const metadata: Metadata = {
+  title: "PALLUVO | Buy Designer Sarees Online | Pure Silk, Handloom, & Bridal",
+  description:
+    "Shop premium Indian sarees online at PALLUVO. Discover handwoven Kanjeevaram silk, Banarasi brocades, lightweight organza, and festive party wear. Free shipping on orders of ₹1,999 or more & easy returns.",
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#FAF7F2]">
+      {/* Welcome 10% Offer Modal for Signed-In Members */}
+      <OfferWelcomeModal />
+
+      {/* Floating Back to Top Button */}
+      <BackToTopButton />
+
       {/* E-Commerce Hero Banner with CTAs & Live Badges */}
       <HeroBanner />
 
       {/* 8-Category Visual Shopping Grid */}
       <CategoryGrid />
 
-      {/* Fresh New Arrivals 4-Column Product Grid */}
-      <NewArrivalsSection />
+      {/* Consolidated Featured Collection (New Arrivals, Popular, Bestsellers) */}
+      <FeaturedCollectionSection />
 
       {/* Stylist Curated "Shop The Look" Bundle Builder */}
       <ShopTheLook />
 
-      {/* Trending Sarees Horizontal Carousel */}
-      <TrendingCarousel />
-
       {/* Special Festive / Seasonal Promo Banner */}
       <CollectionBanner />
 
-      {/* Customer Favorite Bestsellers Grid */}
-      <BestsellersSection />
-
-      {/* PALLUVO Trust & Authenticity Pillars */}
+      {/* PALLUVO Single Trust & Authenticity Pillars */}
       <TrustSection />
-
-      {/* Verified Customer Reviews & Testimonials */}
-      <ReviewsSection />
 
       {/* Community Instagram Styling Masonry */}
       <InstagramGrid />

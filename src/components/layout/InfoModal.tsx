@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, Mail, Phone, MapPin, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, Mail, Phone, Truck, RotateCcw, HelpCircle, BookOpen, Sparkles, ChevronDown, ChevronUp, Clock, Gift, ClipboardList, CreditCard, Info } from "lucide-react";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 export type InfoModalTab = "contact" | "shipping" | "returns" | "faqs" | "story" | "craftsmanship";
+
+export const INFO_MODAL_TABS: { id: InfoModalTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "contact", label: "Contact Us", icon: Phone },
+  { id: "shipping", label: "Shipping Policy", icon: Truck },
+  { id: "returns", label: "Returns & Exchanges", icon: RotateCcw },
+  { id: "faqs", label: "Frequently Asked Questions", icon: HelpCircle },
+  { id: "story", label: "Our Story & Heritage", icon: BookOpen },
+  { id: "craftsmanship", label: "Artisan Craftsmanship", icon: Sparkles },
+];
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -17,15 +27,46 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<InfoModalTab>(initialTab);
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
-  const [contactFormSubmitted, setContactFormSubmitted] = useState(false);
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactMessage, setContactMessage] = useState("");
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    isOpen,
+    onClose,
+  });
 
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+    let targetIndex = -1;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      targetIndex = (index + 1) % INFO_MODAL_TABS.length;
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      targetIndex = (index - 1 + INFO_MODAL_TABS.length) % INFO_MODAL_TABS.length;
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      targetIndex = 0;
+    } else if (e.key === "End") {
+      e.preventDefault();
+      targetIndex = INFO_MODAL_TABS.length - 1;
+    }
+
+    if (targetIndex !== -1) {
+      const nextTab = INFO_MODAL_TABS[targetIndex];
+      setActiveTab(nextTab.id);
+      tabRefs.current[targetIndex]?.focus();
+    }
+  };
+
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [contactFormSubmitted, setContactFormSubmitted] = useState(false);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -51,7 +92,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
     },
     {
       q: "How long does shipping take across India?",
-      a: "Orders dispatch within 24 to 48 hours from our fulfillment ateliers. Delivery typically takes 2-4 business days for metro cities and 4-6 business days for rest of India.",
+      a: "Our official brand shipping policy provides standard insured delivery in 3-5 business days across metros and 5-7 business days across other Indian pin codes. Please note that orders placed through this prototype website are local simulations for demonstration and do not trigger physical courier dispatch.",
     },
     {
       q: "What is your return & exchange policy?",
@@ -66,16 +107,18 @@ export const InfoModal: React.FC<InfoModalProps> = ({
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setContactFormSubmitted(true);
-    setTimeout(() => {
-      setContactFormSubmitted(false);
-      setContactName("");
-      setContactEmail("");
-      setContactMessage("");
-    }, 4000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+    <div
+      ref={modalRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 overflow-y-auto outline-none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="concierge-modal-title"
+      aria-label="Customer Concierge and Heritage"
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
@@ -91,14 +134,14 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               <span className="font-serif-display text-xl font-medium tracking-[0.16em] uppercase text-[#541920]">
                 PALLUVO
               </span>
-              <span className="text-xs text-neutral-400">|</span>
-              <span className="text-xs uppercase tracking-wider text-neutral-600 font-medium">
+              <span className="text-xs text-neutral-600">|</span>
+              <h2 id="concierge-modal-title" className="text-xs uppercase tracking-wider text-neutral-600 font-medium">
                 Customer Concierge & Heritage
-              </span>
+              </h2>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-neutral-500 hover:text-black hover:bg-neutral-200/60 rounded-full transition-colors cursor-pointer"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -107,22 +150,30 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-12 min-h-[480px]">
             {/* Sidebar Tabs */}
-            <div className="md:col-span-4 bg-[#EFEAE1]/60 p-4 border-b md:border-b-0 md:border-r border-[#E8E2D9] space-y-1">
-              {[
-                { id: "contact", label: "Contact Us", icon: Phone },
-                { id: "shipping", label: "Shipping Policy", icon: Truck },
-                { id: "returns", label: "Returns & Exchanges", icon: RotateCcw },
-                { id: "faqs", label: "Frequently Asked Questions", icon: HelpCircle },
-                { id: "story", label: "Our Story & Heritage", icon: BookOpen },
-                { id: "craftsmanship", label: "Artisan Craftsmanship", icon: Sparkles },
-              ].map((tab) => {
+            <div
+              role="tablist"
+              aria-label="Information topics"
+              aria-orientation="vertical"
+              className="md:col-span-4 bg-[#EFEAE1]/60 p-4 border-b md:border-b-0 md:border-r border-[#E8E2D9] space-y-1"
+            >
+              {INFO_MODAL_TABS.map((tab, index) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as InfoModalTab)}
-                    className={`w-full flex items-center gap-3 px-3.5 py-3 text-xs font-semibold rounded-xs transition-colors text-left ${
+                    ref={(el) => {
+                      tabRefs.current[index] = el;
+                    }}
+                    id={`info-tab-${tab.id}`}
+                    role="tab"
+                    type="button"
+                    tabIndex={isActive ? 0 : -1}
+                    aria-selected={isActive}
+                    aria-controls={`info-panel-${tab.id}`}
+                    onKeyDown={(e) => handleTabKeyDown(e, index)}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center gap-3 px-3.5 py-3 min-h-[44px] text-xs font-semibold rounded-xs transition-colors text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none ${
                       isActive
                         ? "bg-[#541920] text-white shadow-xs"
                         : "text-neutral-700 hover:bg-[#FAF7F2]"
@@ -135,11 +186,24 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               })}
             </div>
 
-            {/* Content Area */}
-            <div className="md:col-span-8 p-6 sm:p-8 max-h-[70vh] overflow-y-auto">
+            {/* Content Area - All panels rendered with hidden state to keep tab/panel aria-controls references valid */}
+            {INFO_MODAL_TABS.map((tab) => {
+              const isSelected = activeTab === tab.id;
+              return (
+                <div
+                  key={tab.id}
+                  id={`info-panel-${tab.id}`}
+                  role="tabpanel"
+                  aria-labelledby={`info-tab-${tab.id}`}
+                  tabIndex={0}
+                  hidden={!isSelected}
+                  className={`md:col-span-8 p-6 sm:p-8 max-h-[70vh] overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:ring-offset-2 rounded-xs ${
+                    isSelected ? "block" : "hidden"
+                  }`}
+                >
               
               {/* CONTACT US */}
-              {activeTab === "contact" && (
+              {tab.id === "contact" && (
                 <div className="space-y-6">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">Get in Touch with Us</h3>
@@ -153,88 +217,222 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                       <Mail className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
                       <div>
                         <strong className="block text-neutral-900">Email Concierge</strong>
-                        <a href="mailto:contact@palluvo.com" className="text-[#541920] hover:underline font-medium">
-                          contact@palluvo.com
+                        <a href="mailto:info@palluvo.store" className="text-[#541920] hover:underline font-medium">
+                          info@palluvo.store
                         </a>
-                        <p className="text-[11px] text-neutral-400 mt-0.5">Response within 4 hours</p>
+                        <p className="text-[11px] text-neutral-600 mt-0.5">Response within 4 hours</p>
                       </div>
                     </div>
 
                     <div className="p-3.5 bg-white border border-[#E8E2D9] rounded-xs flex items-start gap-3">
                       <Phone className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="block text-neutral-900">WhatsApp & Phone</strong>
-                        <div className="space-y-0.5">
-                          <a href="tel:+918498854323" className="text-[#541920] hover:underline block font-medium">
-                            +91 84988 54323
-                          </a>
-                          <a href="tel:+918106789789" className="text-[#541920] hover:underline block font-medium">
-                            +91 81067 89789
-                          </a>
+                      <div className="w-full">
+                        <strong className="block text-neutral-900">WhatsApp & Phone Care</strong>
+                        <div className="space-y-2 mt-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-neutral-900">+91 88977 76984</span>
+                            <span className="text-neutral-300">|</span>
+                            <a
+                              href="tel:+918897776984"
+                              className="min-h-[44px] px-2.5 py-1 text-[#541920] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                            >
+                              Call
+                            </a>
+                            <span className="text-neutral-300">·</span>
+                            <a
+                              href="https://wa.me/918897776984"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="min-h-[44px] px-2.5 py-1 text-[#075E54] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#075E54] focus-visible:outline-none"
+                            >
+                              WhatsApp
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-neutral-900">+91 84988 54323</span>
+                            <span className="text-neutral-300">|</span>
+                            <a
+                              href="tel:+918498854323"
+                              className="min-h-[44px] px-2.5 py-1 text-[#541920] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                            >
+                              Call
+                            </a>
+                            <span className="text-neutral-300">·</span>
+                            <a
+                              href="https://wa.me/918498854323"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="min-h-[44px] px-2.5 py-1 text-[#075E54] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#075E54] focus-visible:outline-none"
+                            >
+                              WhatsApp
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-neutral-900">+91 81067 89789</span>
+                            <span className="text-neutral-300">|</span>
+                            <a
+                              href="tel:+918106789789"
+                              className="min-h-[44px] px-2.5 py-1 text-[#541920] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#541920] focus-visible:outline-none"
+                            >
+                              Call
+                            </a>
+                            <span className="text-neutral-300">·</span>
+                            <a
+                              href="https://wa.me/918106789789"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="min-h-[44px] px-2.5 py-1 text-[#075E54] hover:underline inline-flex items-center font-medium focus-visible:ring-2 focus-visible:ring-[#075E54] focus-visible:outline-none"
+                            >
+                              WhatsApp
+                            </a>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-neutral-400 mt-0.5">Mon–Sat, 10 AM – 7 PM IST</p>
+                        <p className="text-[11px] text-neutral-600 mt-1">Mon - Sat, 10 AM to 7 PM IST</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Quick message form */}
                   <div className="bg-white p-5 rounded-xs border border-[#E8E2D9]">
-                    <h4 className="font-serif text-sm font-semibold text-neutral-900 mb-3">
-                      Send Us a Message
-                    </h4>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h4 className="font-serif text-sm font-semibold text-neutral-900">
+                        Send Us a Message
+                      </h4>
+                      <span className="text-[9px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 border border-neutral-200">
+                        Demo Control
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-500 mb-3">
+                      This is a demonstration form for interface testing; messages are not transmitted. For assistance, reach us at{" "}
+                      <a href="mailto:info@palluvo.store" className="underline font-medium text-[#541920]">
+                        info@palluvo.store
+                      </a>
+                      , call{" "}
+                      <a href="tel:+918498854323" className="underline font-medium text-[#541920]">
+                        +91 84988 54323
+                      </a>
+                      , or message on{" "}
+                      <a
+                        href="https://wa.me/918498854323"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-medium text-[#075E54] hover:text-[#054C44]"
+                      >
+                        WhatsApp
+                      </a>
+                      .
+                    </p>
                     {contactFormSubmitted ? (
-                      <div className="p-4 bg-green-50 border border-green-200 text-green-800 rounded-xs flex items-center gap-2 text-xs">
-                        <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                        <span>Thank you! Your message has been received. Our concierge will get back to you shortly.</span>
+                      <div role="status" aria-live="polite" className="p-3.5 bg-[#F4EFE6] border border-[#C5A575]/40 text-neutral-900 rounded-xs space-y-2 text-xs">
+                        <div className="flex items-start gap-2">
+                          <Info className="w-4 h-4 text-[#541920] shrink-0 mt-0.5" />
+                          <span>
+                            Demo simulation complete: No message was transmitted. For real inquiries, please email{" "}
+                            <a href="mailto:info@palluvo.store" className="underline text-[#541920] font-medium">
+                              info@palluvo.store
+                            </a>
+                            , call{" "}
+                            <a href="tel:+918498854323" className="underline text-[#541920] font-medium">
+                              +91 84988 54323
+                            </a>
+                            , or message on{" "}
+                            <a
+                              href="https://wa.me/918498854323"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline text-[#075E54] hover:text-[#054C44] font-medium"
+                            >
+                              WhatsApp
+                            </a>
+                            .
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContactFormSubmitted(false);
+                            setContactName("");
+                            setContactEmail("");
+                            setContactPhone("");
+                            setContactMessage("");
+                          }}
+                          className="text-[10px] font-semibold text-[#541920] hover:underline uppercase tracking-wider cursor-pointer"
+                        >
+                          ← Send another demo message
+                        </button>
                       </div>
                     ) : (
                       <form onSubmit={handleContactSubmit} className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                            <label htmlFor="info-modal-contact-name" className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
                               Your Name
                             </label>
                             <input
+                              id="info-modal-contact-name"
+                              name="name"
+                              autoComplete="name"
                               type="text"
                               required
                               value={contactName}
                               onChange={(e) => setContactName(e.target.value)}
                               placeholder="e.g. Radhika Sharma"
-                              className="w-full px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                              className="w-full min-h-[44px] px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                            <label htmlFor="info-modal-contact-email" className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
                               Email Address
                             </label>
                             <input
+                              id="info-modal-contact-email"
+                              name="email"
+                              autoComplete="email"
                               type="email"
                               required
                               value={contactEmail}
                               onChange={(e) => setContactEmail(e.target.value)}
                               placeholder="e.g. radhika@example.com"
-                              className="w-full px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                              className="w-full min-h-[44px] px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="info-modal-contact-phone" className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                              Phone Number
+                            </label>
+                            <input
+                              id="info-modal-contact-phone"
+                              name="phone"
+                              autoComplete="tel"
+                              inputMode="tel"
+                              type="tel"
+                              value={contactPhone}
+                              onChange={(e) => setContactPhone(e.target.value)}
+                              placeholder="e.g. +91 98765 43210…"
+                              className="w-full min-h-[44px] px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
+                          <label htmlFor="info-modal-contact-message" className="block text-[11px] font-semibold text-neutral-700 uppercase mb-1">
                             How Can We Help You?
                           </label>
                           <textarea
+                            id="info-modal-contact-message"
+                            name="message"
                             required
                             rows={3}
                             value={contactMessage}
                             onChange={(e) => setContactMessage(e.target.value)}
-                            placeholder="Ask about saree fabrics, bridal curation, or delivery timelines..."
-                            className="w-full px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:outline-none focus:border-[#541920]"
+                            placeholder="Ask about saree fabrics, bridal curation, or delivery timelines…"
+                            className="w-full px-3 py-2 text-xs border border-[#DCD5C9] rounded-xs bg-[#FAF7F2] focus:bg-white focus:border-[#541920] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
                           />
                         </div>
 
                         <button
                           type="submit"
-                          className="px-6 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors"
+                          className="min-h-[44px] px-6 py-2.5 bg-[#541920] hover:bg-[#3D1217] text-white text-xs uppercase tracking-widest font-semibold rounded-xs shadow-xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#541920]"
                         >
                           Submit Inquiry
                         </button>
@@ -245,7 +443,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* SHIPPING POLICY */}
-              {activeTab === "shipping" && (
+              {tab.id === "shipping" && (
                 <div className="space-y-5">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">Shipping & Delivery Policy</h3>
@@ -256,26 +454,31 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                   <div className="space-y-3.5 text-xs text-neutral-700 leading-relaxed font-sans">
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        🚚 Free Express Shipping
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <Truck className="w-4 h-4 text-[#541920]" />
+                        <span>Free Shipping</span>
                       </strong>
                       <p>
-                        We offer 100% complimentary insured express shipping across India on all orders above <strong>₹1,999</strong>. For orders under ₹1,999, a flat nominal fee of ₹150 applies.
+                        We offer 100% complimentary insured shipping across India on all orders of <strong>₹1,999 or more</strong>. For orders under ₹1,999, a flat nominal fee of ₹149 applies.
                       </p>
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        ⏱️ Dispatch & Delivery Timelines
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <Clock className="w-4 h-4 text-[#541920]" />
+                        <span>Dispatch & Delivery Timelines (Illustrative Brand Policy)</span>
                       </strong>
-                      <p>• <strong>Dispatch:</strong> Ready-to-ship sarees dispatch within 24 to 48 hours.</p>
-                      <p>• <strong>Metro Cities:</strong> Delivered in 2–4 business days (Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata).</p>
-                      <p>• <strong>Tier 2 & 3 Cities:</strong> Delivered in 4–6 business days via BlueDart, Delhivery, or DTDC.</p>
+                      <p>• <strong>Metro Cities:</strong> Delivered in 3-5 Business Days (Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata).</p>
+                      <p>• <strong>Tier 2 & 3 Cities:</strong> Delivered in 5-7 Business Days via BlueDart, Delhivery, or DTDC.</p>
+                      <p className="text-[11px] text-neutral-500 pt-1 border-t border-[#FAF7F2]">
+                        Note: Orders placed through this prototype storefront are local simulations for evaluation and do not trigger physical courier dispatch.
+                      </p>
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-1.5">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        🎁 Keepsake Packaging
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <Gift className="w-4 h-4 text-[#541920]" />
+                        <span>Keepsake Packaging</span>
                       </strong>
                       <p>
                         Every drape is layered in archival butter paper, enveloped in breathable pure cotton muslin, and encased in our signature PALLUVO gold-embossed keepsake hard box.
@@ -286,7 +489,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* RETURNS & EXCHANGES */}
-              {activeTab === "returns" && (
+              {tab.id === "returns" && (
                 <div className="space-y-5">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">7-Day Return & Exchange</h3>
@@ -297,26 +500,30 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                   <div className="space-y-3 text-xs text-neutral-700 leading-relaxed font-sans">
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        ✨ Easy Return Window
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <Sparkles className="w-4 h-4 text-[#541920]" />
+                        <span>Easy Return Window</span>
                       </strong>
                       <p>
-                        You can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>contact@palluvo.com</strong>.
+                        You can initiate a return or exchange within <strong>7 days of delivery</strong> directly from your account or by emailing us at <strong>info@palluvo.store</strong>.
                       </p>
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        📋 Return Conditions
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <ClipboardList className="w-4 h-4 text-[#541920]" />
+                        <span>Return Conditions by Product Type</span>
                       </strong>
-                      <p>• Saree must be unused, unwashed, and folded with all original tags & Silk Mark tags intact.</p>
-                      <p>• Attached unstitched blouse piece must remain intact and uncut.</p>
-                      <p>• Return in original PALLUVO luxury box with protective wrap.</p>
+                      <p>• <strong>Sarees:</strong> Must be unused, unwashed, and folded with all original tags, Silk Mark tags, and attached unstitched blouse intact.</p>
+                      <p>• <strong>Separate Blouse Pieces:</strong> Must remain unstitched, uncut, and in original protective packaging.</p>
+                      <p>• <strong>Handcrafted Jewelry:</strong> Must be unworn with unbroken tamper-evident security seals and protective pouch intact.</p>
+                      <p>• Return in original PALLUVO luxury box or keepsake pouch with protective wrap.</p>
                     </div>
 
                     <div className="p-4 bg-white rounded-xs border border-[#E8E2D9] space-y-2">
-                      <strong className="text-neutral-900 font-semibold block text-sm">
-                        💳 Refund Processing
+                      <strong className="text-neutral-900 font-semibold flex items-center gap-2 text-sm">
+                        <CreditCard className="w-4 h-4 text-[#541920]" />
+                        <span>Refund Processing</span>
                       </strong>
                       <p>
                         Once our quality check team receives and inspects the drape, refunds are credited back to your original payment method (or UPI/Bank Account for COD orders) within 24 to 48 hours.
@@ -327,7 +534,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* FAQS */}
-              {activeTab === "faqs" && (
+              {tab.id === "faqs" && (
                 <div className="space-y-5">
                   <div>
                     <h3 className="font-serif text-2xl text-neutral-900">Frequently Asked Questions</h3>
@@ -343,21 +550,29 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                         className="bg-white rounded-xs border border-[#E8E2D9] overflow-hidden"
                       >
                         <button
+                          type="button"
+                          id={`modal-faq-question-${idx}`}
+                          aria-expanded={openFaqIndex === idx}
+                          aria-controls={`modal-faq-answer-${idx}`}
                           onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
                           className="w-full p-4 flex items-center justify-between text-left text-xs sm:text-sm font-semibold text-neutral-900 hover:text-[#541920] transition-colors"
                         >
                           <span>{faq.q}</span>
                           {openFaqIndex === idx ? (
-                            <ChevronUp className="w-4 h-4 text-[#541920] shrink-0" />
+                            <ChevronUp className="w-4 h-4 text-[#541920] shrink-0" aria-hidden="true" />
                           ) : (
-                            <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
+                            <ChevronDown className="w-4 h-4 text-neutral-500 shrink-0" aria-hidden="true" />
                           )}
                         </button>
-                        {openFaqIndex === idx && (
-                          <div className="px-4 pb-4 pt-1 text-xs text-neutral-600 leading-relaxed font-sans border-t border-[#FAF7F2]">
-                            {faq.a}
-                          </div>
-                        )}
+                        <div
+                          id={`modal-faq-answer-${idx}`}
+                          role="region"
+                          aria-labelledby={`modal-faq-question-${idx}`}
+                          hidden={openFaqIndex !== idx}
+                          className="px-4 pb-4 pt-1 text-xs text-neutral-600 leading-relaxed font-sans border-t border-[#FAF7F2]"
+                        >
+                          {faq.a}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -365,10 +580,10 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* OUR STORY */}
-              {activeTab === "story" && (
+              {tab.id === "story" && (
                 <div className="space-y-5">
                   <div>
-                    <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#C5A575] block">
+                    <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#7C5C26] block">
                       The Philosophy
                     </span>
                     <h3 className="font-serif text-2xl text-neutral-900 mt-0.5">Every Drape, A Little Magic</h3>
@@ -376,7 +591,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({
 
                   <div className="space-y-3.5 text-xs text-neutral-700 leading-relaxed font-sans">
                     <p>
-                      PALLUVO was born from a reverent celebration of the Indian saree — a six-yard tapestry of generational wisdom, cultural legacy, and effortless femininity.
+                      PALLUVO was born from a reverent celebration of the Indian saree, a six-yard tapestry of generational wisdom, cultural legacy, and effortless femininity.
                     </p>
                     <p>
                       In an era of fleeting fast fashion, PALLUVO anchors itself in the enduring poetry of slow textiles. We bridge the world between revered artisan handloom clusters and the contemporary woman who wears her heritage with modern grace.
@@ -389,10 +604,10 @@ export const InfoModal: React.FC<InfoModalProps> = ({
               )}
 
               {/* CRAFTSMANSHIP */}
-              {activeTab === "craftsmanship" && (
+              {tab.id === "craftsmanship" && (
                 <div className="space-y-5">
                   <div>
-                    <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#C5A575] block">
+                    <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#7C5C26] block">
                       Loom To Wardrobe
                     </span>
                     <h3 className="font-serif text-2xl text-neutral-900 mt-0.5">Artisan Clusters & Weaving Purity</h3>
@@ -438,15 +653,17 @@ export const InfoModal: React.FC<InfoModalProps> = ({
                 </div>
               )}
 
-            </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Modal Footer */}
-          <div className="px-6 py-3 bg-[#F4EFE6] border-t border-[#E8E2D9] flex items-center justify-between text-xs text-neutral-500">
-            <span>PALLUVO Client Concierge • Available 7 Days a Week</span>
+          <div className="px-6 py-3 bg-[#F4EFE6] border-t border-[#E8E2D9] flex items-center justify-between text-xs text-neutral-600">
+            <span>PALLUVO Client Concierge • Mon – Sat, 10 AM – 7 PM IST</span>
             <button
               onClick={onClose}
-              className="px-4 py-1.5 bg-[#541920] hover:bg-[#3D1217] text-white text-[11px] uppercase tracking-wider font-semibold rounded-xs transition-colors"
+              className="px-4 py-1.5 bg-[#541920] hover:bg-[#3D1217] text-white text-[11px] uppercase tracking-wider font-semibold rounded-xs transition-colors cursor-pointer"
             >
               Close Window
             </button>

@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
@@ -16,6 +17,15 @@ const nextConfig: NextConfig = {
         hostname: "images.pexels.com",
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: "/sarees",
+        destination: "/shop",
+        permanent: true,
+      },
+    ];
   },
 };
 
